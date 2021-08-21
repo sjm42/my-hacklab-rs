@@ -1,9 +1,15 @@
 // main.rs
 
-use chrono::*;
+// use chrono::*;
 use log::*;
-use std::{env, error::Error, fs, thread, time};
+use std::{env, error::Error};
 use structopt::StructOpt;
+
+mod utils;
+use utils::sdl1000x::*;
+
+// const LAB_LOAD: &str = "lab-load.siu.ro:5025";
+const LAB_LOAD: &str = "10.28.0.62:5025";
 
 #[derive(Debug, Clone, StructOpt)]
 pub struct GlobalOptions {
@@ -13,9 +19,9 @@ pub struct GlobalOptions {
     pub trace: bool,
 }
 
-
-fn main() -> Result<(), Box<dyn Error>> {
-    let mut opt = GlobalOptions::from_args();
+#[tokio::main]
+async fn main() -> Result<(), Box<dyn Error>> {
+    let opt = GlobalOptions::from_args();
     let loglevel = if opt.trace {
         LevelFilter::Trace
     } else if opt.debug {
@@ -34,6 +40,21 @@ fn main() -> Result<(), Box<dyn Error>> {
     debug!("Source timestamp: {}", env!("SOURCE_TIMESTAMP"));
     debug!("Compiler version: {}", env!("RUSTC_VERSION"));
     debug!("Global config: {:?}", &opt);
+
+    let mut lab_load = SDL1000X::new(LAB_LOAD).await?;
+    info!("Lab load at {:?}", lab_load.addr());
+    info!("SCPI idn: {}", &lab_load.cmd("*IDN?").await?);
+
+    info!("mac: {}", &lab_load.cmd("lan:mac?").await?);
+    info!("ip: {}", &lab_load.cmd("lan:ipad?").await?);
+    info!("mask: {}", &lab_load.cmd("lan:smask?").await?);
+    info!("gw: {}", &lab_load.cmd("lan:gat?").await?);
+
+    info!("wave: {:?}", &lab_load.wave("volt").await?);
+    info!("voltage: {}", &lab_load.volt().await?);
+    info!("current: {}", &lab_load.curr().await?);
+    info!("power: {}", &lab_load.pow().await?);
+    info!("resistance: {}", &lab_load.res().await?);
 
     Ok(())
 }

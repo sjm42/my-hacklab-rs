@@ -10,6 +10,8 @@ chrono = "*"
 env_logger = "*"
 log = "*"
 structopt = "*"
+tokio = { version = "0.2", features = ["full"] }
+tokio-lxi = "*"
 
 [build-dependencies]
 build-data = "*"
