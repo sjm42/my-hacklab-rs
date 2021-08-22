@@ -2,7 +2,7 @@
 
 // use chrono::*;
 use log::*;
-use std::{env, error::Error};
+use std::{env, error::Error, thread, time};
 use structopt::StructOpt;
 
 mod utils;
@@ -41,20 +41,62 @@ async fn main() -> Result<(), Box<dyn Error>> {
     debug!("Compiler version: {}", env!("RUSTC_VERSION"));
     debug!("Global config: {:?}", &opt);
 
-    let mut lab_load = SDL1000X::new(LAB_LOAD).await?;
-    info!("Lab load at {:?}", lab_load.addr());
-    info!("SCPI idn: {}", &lab_load.cmd("*IDN?").await?);
+    let mut ll = SDL1000X::new(LAB_LOAD).await?;
+    info!("Lab load at {:?}", ll.addr());
+    info!("idn? {}", &ll.qry("*IDN?").await?);
+    info!("mac? {}", &ll.qry("lan:mac?").await?);
+    info!("ip? {}", &ll.qry("lan:ipad?").await?);
+    info!("mask? {}", &ll.qry("lan:smask?").await?);
+    info!("gw? {}", &ll.qry("lan:gat?").await?);
 
-    info!("mac: {}", &lab_load.cmd("lan:mac?").await?);
-    info!("ip: {}", &lab_load.cmd("lan:ipad?").await?);
-    info!("mask: {}", &lab_load.cmd("lan:smask?").await?);
-    info!("gw: {}", &lab_load.cmd("lan:gat?").await?);
+    info!("function? {}", &ll.qry("func?").await?);
+    info!("sense? {}", &ll.get_state("syst:sens").await?);
 
-    info!("wave: {:?}", &lab_load.wave("volt").await?);
-    info!("voltage: {}", &lab_load.volt().await?);
-    info!("current: {}", &lab_load.curr().await?);
-    info!("power: {}", &lab_load.pow().await?);
-    info!("resistance: {}", &lab_load.res().await?);
+    // info!("wave: {:?}", &lab_load.wave(Meas::Volt).await?);
+    info!("voltage? {}", &ll.meas(Meas::Volt).await?);
+    info!("current? {}", &ll.meas(Meas::Curr).await?);
+    info!("power? {}", &ll.meas(Meas::Pow).await?);
+    info!("resistance? {}", &ll.meas(Meas::Res).await?);
+
+    info!("short {}", &ll.set_state(":shor", State::Off).await?);
+    info!("input {}", &ll.set_state(":inp", State::Off).await?);
+    info!("sense {}", &ll.set_state("syst:sens", State::On).await?);
+    info!("input? {}", &ll.qry(":inp?").await?);
+    info!("short? {}", &ll.qry(":shor?").await?);
+    info!("irange? {}", &ll.qry(":curr:irang?").await?);
+    info!("vrange? {}", &ll.qry(":curr:vrang?").await?);
+
+    thread::sleep(time::Duration::new(1, 0));
+
+    info!("func {}", &ll.set_func(Func::Curr).await?);
+    // 5A or 30A
+    info!("current range {}", &ll.set(":curr:irang", 5.0).await?);
+    // 36V or 150V
+    info!("voltage range {}", &ll.set(":curr:vrang", 36.0).await?);
+    info!("current {}", &ll.set(":curr", 0.120).await?);
+    info!("input {}", &ll.set_state(":inp", State::On).await?);
+
+    thread::sleep(time::Duration::new(5, 0));
+
+    info!("sense? {}", &ll.get_state("syst:sens").await?);
+    info!("voltage? {}", &ll.meas(Meas::Volt).await?);
+    info!("current? {}", &ll.meas(Meas::Curr).await?);
+    info!("power? {}", &ll.meas(Meas::Pow).await?);
+    info!("resistance? {}", &ll.meas(Meas::Res).await?);
+    info!("current {}", &ll.set(":curr", 0.150).await?);
+
+    thread::sleep(time::Duration::new(5, 0));
+
+    info!("sense? {}", &ll.get_state("syst:sens").await?);
+    info!("voltage? {}", &ll.meas(Meas::Volt).await?);
+    info!("current? {}", &ll.meas(Meas::Curr).await?);
+    info!("power? {}", &ll.meas(Meas::Pow).await?);
+    info!("resistance? {}", &ll.meas(Meas::Res).await?);
+
+    thread::sleep(time::Duration::new(1, 0));
+
+    info!("input off {}", &ll.set_state(":inp", State::Off).await?);
+    info!("sense {}", &ll.set_state("syst:sens", State::Off).await?);
 
     Ok(())
 }
