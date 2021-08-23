@@ -1,2 +1,2 @@
 # my-hacklab-rs
-My hacklab
+My mini hacklab at home, very stupid and simple demo to remote control my lab gear.
