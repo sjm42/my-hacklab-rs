@@ -526,9 +526,9 @@ dependencies = [
 
 [[package]]
 name = "tokio"
-version = "1.10.0"
+version = "1.10.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "01cf844b23c6131f624accf65ce0e4e9956a8bb329400ea5bcc26ae3a5c20b0b"
+checksum = "92036be488bb6594459f2e03b60e42df6f937fe6ca5c5ffdcb539c6b84dc40f5"
 dependencies = [
  "autocfg",
  "bytes",
@@ -547,6 +547,8 @@ dependencies = [
 [[package]]
 name = "tokio-lxi"
 version = "0.2.2"
+source = "registry+https://github.com/rust-lang/crates.io-index"
+checksum = "7078af51655f21a1a614f753cff9c78f62bf9acb88bc060a60471eda7680c647"
 dependencies = [
  "anyhow",
  "thiserror",
