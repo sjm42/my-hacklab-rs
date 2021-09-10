@@ -5,11 +5,11 @@ use log::*;
 use std::{env, error::Error, thread, time};
 use structopt::StructOpt;
 
-mod utils;
-use utils::sdl1000x;
-use utils::spd3303x;
+mod sdl1000x;
+use sdl1000x::SDL1000X;
 
-use crate::utils::{sdl1000x::SDL1000X, spd3303x::SPD3303X};
+mod spd3303x;
+use spd3303x::SPD3303X;
 
 const LAB_LOAD: &str = "lab-load.siu.ro:5025";
 const LAB_POWER: &str = "lab-power.siu.ro:5025";
