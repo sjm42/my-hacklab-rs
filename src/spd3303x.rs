@@ -1,19 +1,38 @@
 // spd3303x.rs
 
-use log::*;
-use std::{
-    error::Error,
-    fmt,
-    net::{SocketAddr, ToSocketAddrs},
-};
-use tokio_lxi::*;
+use lxi::*;
+use std::{error::Error, fmt, net::SocketAddr};
+
+use crate::StdLxi;
 
 // https://int.siglent.com/upload_file/user/SPD3000X/SPD3303X_QuickStart_QS0503X-E01B.pdf
 
+#[allow(dead_code)]
 // #[derive(Debug)]
 pub struct SPD3303X {
     addr: SocketAddr,
-    dev: LxiDevice,
+    lxi_dev: LxiTextDevice,
+}
+
+impl StdLxi for SPD3303X {
+    fn create(addr: SocketAddr, lxi_dev: LxiTextDevice) -> Self {
+        SPD3303X { addr, lxi_dev }
+    }
+    fn dev(&mut self) -> &mut LxiTextDevice {
+        &mut self.lxi_dev
+    }
+}
+
+#[allow(dead_code)]
+impl SPD3303X {
+    pub fn addr(&self) -> &SocketAddr {
+        &self.addr
+    }
+
+    pub fn meas(&mut self, c: Ch, m: Meas) -> Result<f32, Box<dyn Error>> {
+        let m = self.req(&format!("meas:{}? {}", m, c))?;
+        Ok(m.parse::<f32>()?)
+    }
 }
 
 #[allow(dead_code)]
@@ -65,70 +84,6 @@ impl fmt::Display for State {
             Self::Off => "OFF",
         };
         f.write_str(p)
-    }
-}
-
-#[allow(dead_code)]
-impl SPD3303X {
-    pub async fn new<T: fmt::Display + AsRef<str> + ToSocketAddrs>(
-        host: T,
-    ) -> Result<SPD3303X, Box<dyn Error>> {
-        let addr = match host.to_socket_addrs()?.next() {
-            None => return Err("Invalid address".into()),
-            Some(a) => a,
-        };
-        debug!("Connecting to {:?}...", addr);
-        let mut dev = LxiDevice::connect(&addr).await?;
-        dev.set_eol(b"\n");
-        Ok(SPD3303X { addr, dev })
-    }
-
-    pub fn addr(&self) -> &SocketAddr {
-        &self.addr
-    }
-
-    pub async fn send(&mut self, s: &str) -> Result<(), Box<dyn Error>> {
-        debug!("Send: {}", s);
-        Ok(self.dev.send(s).await?)
-    }
-
-    pub async fn recv(&mut self) -> Result<String, Box<dyn Error>> {
-        let r = self.dev.receive().await?;
-        debug!("Recv: {}", &r);
-        Ok(r)
-    }
-
-    pub async fn req(&mut self, s: &str) -> Result<String, Box<dyn Error>> {
-        self.send(s).await?;
-        Ok(self.recv().await?)
-    }
-
-    pub async fn set(&mut self, subsys: &str, v: f32) -> Result<f32, Box<dyn Error>> {
-        self.send(&format!("{} {}", subsys, v)).await?;
-        Ok(v)
-    }
-
-    pub async fn set_state(&mut self, subsys: &str, state: State) -> Result<State, Box<dyn Error>> {
-        self.send(&format!("{} {}", subsys, state)).await?;
-        Ok(state)
-    }
-
-    pub async fn get_state(&mut self, subsys: &str) -> Result<State, Box<dyn Error>> {
-        let resp = self.req(&format!("{}?", subsys)).await?;
-        Ok(match resp.as_str() {
-            "1" | "on" | "ON" => State::On,
-            _ => State::Off,
-        })
-    }
-
-    pub async fn get_stateb(&mut self, subsys: &str) -> Result<bool, Box<dyn Error>> {
-        let resp = self.get_state(subsys).await?;
-        Ok(matches!(resp, State::On))
-    }
-
-    pub async fn meas(&mut self, c: Ch, m: Meas) -> Result<f32, Box<dyn Error>> {
-        let m = self.req(&format!("meas:{}? {}", m, c)).await?;
-        Ok(m.parse::<f32>()?)
     }
 }
 // EOF

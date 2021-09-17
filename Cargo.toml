@@ -11,9 +11,7 @@ chrono = "*"
 env_logger = "*"
 log = "*"
 structopt = "*"
-tokio = { version = "1", features = ["full"] }
-tokio-lxi = { version = "*" }
-# tokio-lxi = { version = "*", path = "../tokio-lxi" }
+lxi = "*"
 
 [build-dependencies]
 build-data = "*"
