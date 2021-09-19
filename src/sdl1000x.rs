@@ -11,12 +11,25 @@ use crate::StdLxi;
 // #[derive(Debug)]
 pub struct SDL1000X {
     addr: SocketAddr,
+    name: String,
+    pub verbose: bool,
     lxi_dev: LxiTextDevice,
 }
 
 impl StdLxi for SDL1000X {
-    fn create(addr: SocketAddr, lxi_dev: LxiTextDevice) -> Self {
-        SDL1000X { addr, lxi_dev }
+    fn create(addr: SocketAddr, name: String, lxi_dev: LxiTextDevice) -> Self {
+        SDL1000X {
+            addr,
+            name,
+            verbose: false,
+            lxi_dev,
+        }
+    }
+    fn name(&self) -> &str {
+        &self.name
+    }
+    fn verbose(&self) -> bool {
+        self.verbose
     }
     fn dev(&mut self) -> &mut LxiTextDevice {
         &mut self.lxi_dev

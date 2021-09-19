@@ -12,6 +12,7 @@ env_logger = "*"
 log = "*"
 structopt = "*"
 lxi = "*"
+num = "*"
 
 [build-dependencies]
 build-data = "*"
