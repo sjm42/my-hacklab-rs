@@ -66,8 +66,8 @@ pub trait StdLxi {
     where
         S: AsRef<str> + Display,
     {
-        self.send(s.as_ref())?;
-        let r = self.recv()?;
+        self.q_send(s.as_ref())?;
+        let r = self.q_recv()?;
         if self.verbose() {
             info!("{} --> {} --> {}", s.as_ref(), self.name(), &r);
         }
