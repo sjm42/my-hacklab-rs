@@ -10,7 +10,7 @@ use my_hacklab::*;
 const LAB_LOAD: &str = "lab-load.siu.ro:5025";
 
 const CURR_START: f32 = 0.020; // 10 mA
-const CURR_LIMIT: f32 = 5.000; // 5A
+const CURR_LIMIT: f32 = 1.000; // 5A
 const DROP_MAX: f32 = 0.30; // 30%
 
 fn main() -> Result<(), Box<dyn Error>> {
@@ -52,15 +52,16 @@ fn main() -> Result<(), Box<dyn Error>> {
         ld.set(":current", curr)?;
 
         thread::sleep(time::Duration::new(2, 0));
-        ld.meas(sdl1000x::Meas::Pow)?;
         ld.meas(sdl1000x::Meas::Res)?;
         ld.meas(sdl1000x::Meas::Curr)?;
+        let pwr = ld.meas(sdl1000x::Meas::Pow)?;
         let volt = ld.meas(sdl1000x::Meas::Volt)?;
         let drop = 1.0 - volt / volt_initial;
         info!(
-            "Curr: {:.3} Volt: {:.3} Drop: {:.1}%",
+            "Curr: {:.3}A Volt: {:.3}V Power: {:.2}W Drop: {:.1}%",
             curr,
             volt,
+            pwr,
             drop * 100.0
         );
         if drop > DROP_MAX {
