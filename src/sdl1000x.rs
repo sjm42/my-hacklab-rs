@@ -1,7 +1,7 @@
 // sdl1000x.rs
 
 use lxi::*;
-use std::{error::Error, fmt, net::SocketAddr};
+use std::{fmt, net::SocketAddr};
 
 use crate::StdLxi;
 
@@ -42,18 +42,18 @@ impl SDL1000X {
         &self.addr
     }
 
-    pub fn set_func(&mut self, func: Func) -> Result<Func, Box<dyn Error>> {
+    pub fn set_func(&mut self, func: Func) -> anyhow::Result<Func> {
         self.send(&format!("FUNC {}", func))?;
         Ok(func)
     }
 
-    pub fn meas(&mut self, m: Meas) -> Result<f32, Box<dyn Error>> {
+    pub fn meas(&mut self, m: Meas) -> anyhow::Result<f32> {
         let m = self.req(&format!("meas:{}?", m))?;
         Ok(m.parse::<f32>()?)
     }
 
     // wave type can be "curr", "volt", "pow", "res"
-    pub fn wave(&mut self, m: Meas) -> Result<Vec<f32>, Box<dyn Error>> {
+    pub fn wave(&mut self, m: Meas) -> anyhow::Result<Vec<f32>> {
         let c = format!("meas:wave? {}", m);
         let w = self.req(&c)?;
         Ok(w.split(',')

@@ -1,7 +1,7 @@
 // startup.rs
 
 use log::*;
-use std::{env, error::Error};
+use std::env;
 use structopt::StructOpt;
 
 #[derive(Clone, Debug, Default, StructOpt)]
@@ -12,7 +12,7 @@ pub struct OptsCommon {
     pub trace: bool,
 }
 impl OptsCommon {
-    pub fn finish(&mut self) -> Result<(), Box<dyn Error>> {
+    pub fn finish(&mut self) -> anyhow::Result<()> {
         Ok(())
     }
     fn get_loglevel(&self) -> LevelFilter {
@@ -26,7 +26,7 @@ impl OptsCommon {
     }
 }
 
-pub fn expand_home(pathname: &mut String) -> Result<(), Box<dyn Error>> {
+pub fn expand_home(pathname: &mut String) -> anyhow::Result<()> {
     let home = env::var("HOME")?;
     *pathname = pathname.as_str().replace("$HOME", &home);
     Ok(())

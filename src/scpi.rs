@@ -1,10 +1,11 @@
 // scpi.rs
 
+use anyhow::anyhow;
 use log::*;
 use lxi::*;
 use num::traits::Float;
 use std::net::{SocketAddr, ToSocketAddrs};
-use std::{error::Error, fmt, fmt::Display, time};
+use std::{fmt, fmt::Display, time};
 
 pub trait StdLxi {
     fn create(addr: SocketAddr, name: String, lxi_dev: LxiTextDevice) -> Self;
@@ -12,13 +13,13 @@ pub trait StdLxi {
     fn verbose(&self) -> bool;
     fn dev(&mut self) -> &mut LxiTextDevice;
 
-    fn new<H>(host: H, name: String) -> Result<Self, Box<dyn Error>>
+    fn new<H>(host: H, name: String) -> anyhow::Result<Self>
     where
         H: fmt::Display + AsRef<str> + ToSocketAddrs,
         Self: Sized,
     {
         let addr = match host.to_socket_addrs()?.next() {
-            None => return Err("Invalid address".into()),
+            None => return Err(anyhow!("Invalid address: {}", host)),
             Some(a) => a,
         };
         let mut lxi_dev = LxiTextDevice::new(
@@ -31,14 +32,14 @@ pub trait StdLxi {
         Ok(Self::create(addr, name, lxi_dev))
     }
 
-    fn q_send<S>(&mut self, s: S) -> Result<(), Box<dyn Error>>
+    fn q_send<S>(&mut self, s: S) -> anyhow::Result<()>
     where
         S: AsRef<str> + Display,
     {
         Ok(self.dev().send(s.as_ref().as_bytes())?)
     }
 
-    fn send<S>(&mut self, s: S) -> Result<(), Box<dyn Error>>
+    fn send<S>(&mut self, s: S) -> anyhow::Result<()>
     where
         S: AsRef<str> + Display,
     {
@@ -48,13 +49,13 @@ pub trait StdLxi {
         self.q_send(s.as_ref())
     }
 
-    fn q_recv(&mut self) -> Result<String, Box<dyn Error>> {
+    fn q_recv(&mut self) -> anyhow::Result<String> {
         let byt = self.dev().receive()?;
         let str = String::from_utf8_lossy(&byt);
         Ok(str.into_owned())
     }
 
-    fn recv(&mut self) -> Result<String, Box<dyn Error>> {
+    fn recv(&mut self) -> anyhow::Result<String> {
         let s = self.q_recv()?;
         if self.verbose() {
             info!("Recv: {} --> {}", self.name(), &s);
@@ -62,7 +63,7 @@ pub trait StdLxi {
         Ok(s)
     }
 
-    fn req<S>(&mut self, s: S) -> Result<String, Box<dyn Error>>
+    fn req<S>(&mut self, s: S) -> anyhow::Result<String>
     where
         S: AsRef<str> + Display,
     {
@@ -74,7 +75,7 @@ pub trait StdLxi {
         Ok(r)
     }
 
-    fn set<S, F>(&mut self, subsys: S, v: F) -> Result<F, Box<dyn Error>>
+    fn set<S, F>(&mut self, subsys: S, v: F) -> anyhow::Result<F>
     where
         S: AsRef<str> + Display,
         F: Float + Display,
@@ -83,7 +84,7 @@ pub trait StdLxi {
         Ok(v)
     }
 
-    fn set_state<S>(&mut self, subsys: S, state: PortState) -> Result<PortState, Box<dyn Error>>
+    fn set_state<S>(&mut self, subsys: S, state: PortState) -> anyhow::Result<PortState>
     where
         S: AsRef<str> + Display,
     {
@@ -91,7 +92,7 @@ pub trait StdLxi {
         Ok(state)
     }
 
-    fn get_state<S>(&mut self, subsys: S) -> Result<PortState, Box<dyn Error>>
+    fn get_state<S>(&mut self, subsys: S) -> anyhow::Result<PortState>
     where
         S: AsRef<str> + Display,
     {
@@ -102,7 +103,7 @@ pub trait StdLxi {
         })
     }
 
-    fn get_stateb<S>(&mut self, subsys: S) -> Result<bool, Box<dyn Error>>
+    fn get_stateb<S>(&mut self, subsys: S) -> anyhow::Result<bool>
     where
         S: AsRef<str> + Display,
     {

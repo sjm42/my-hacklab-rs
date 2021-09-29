@@ -1,7 +1,7 @@
 // spd3303x.rs
 
 use lxi::*;
-use std::{error::Error, fmt, net::SocketAddr};
+use std::{fmt, net::SocketAddr};
 
 use crate::StdLxi;
 
@@ -42,7 +42,7 @@ impl SPD3303X {
         &self.addr
     }
 
-    pub fn meas(&mut self, c: Ch, m: Meas) -> Result<f32, Box<dyn Error>> {
+    pub fn meas(&mut self, c: Ch, m: Meas) -> anyhow::Result<f32> {
         let m = self.req(&format!("meas:{}? {}", m, c))?;
         Ok(m.parse::<f32>()?)
     }

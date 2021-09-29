@@ -1,9 +1,9 @@
 // main.rs
 
-// use chrono::*;
+use anyhow::anyhow;
 use log::*;
 use num::*;
-use std::{error::Error, thread, time};
+use std::{thread, time};
 use structopt::StructOpt;
 
 use my_hacklab::*;
@@ -14,7 +14,7 @@ const CURR_START: f32 = 0.010; // in A -- 10 mA
 const CURR_LIMIT: f32 = 1.000; // in A
 const DROP_MAX: f32 = 0.20; // 20%
 
-fn main() -> Result<(), Box<dyn Error>> {
+fn main() -> anyhow::Result<()> {
     let opts = OptsCommon::from_args();
     start_pgm(&opts, "Load test");
     debug!("Global config: {:?}", &opts);
@@ -77,7 +77,7 @@ fn main() -> Result<(), Box<dyn Error>> {
         );
         ld.set_state(":input:state", PortState::Off)?;
         ld.set_state("system:sense", PortState::Off)?;
-        return Err("Current limit".into());
+        return Err(anyhow!("Current limit"));
     }
     while curr_step > CURR_START {
         // find the sweet spot with "CURR_START" accuracy
@@ -113,7 +113,7 @@ fn steps_i(
     v_thres: f32,
     i_start: f32,
     i_step: f32,
-) -> Result<(f32, usize), Box<dyn Error>> {
+) -> anyhow::Result<(f32, usize)> {
     ld.set(":current", i_start)?;
     thread::sleep(time::Duration::new(2, 0));
     let v_initial = ld.meas(sdl1000x::Meas::Volt)?;

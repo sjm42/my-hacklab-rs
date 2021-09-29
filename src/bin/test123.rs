@@ -1,8 +1,7 @@
 // main.rs
 
-// use chrono::*;
 use log::*;
-use std::{error::Error, thread, time};
+use std::{thread, time};
 use structopt::StructOpt;
 
 use my_hacklab::*;
@@ -10,7 +9,7 @@ use my_hacklab::*;
 const LAB_LOAD: &str = "lab-load.siu.ro:5025";
 const LAB_POWER: &str = "lab-power.siu.ro:5025";
 
-fn main() -> Result<(), Box<dyn Error>> {
+fn main() -> anyhow::Result<()> {
     let opts = OptsCommon::from_args();
     start_pgm(&opts, "My Hacklab");
     debug!("Global config: {:?}", &opts);
