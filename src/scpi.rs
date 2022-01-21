@@ -19,14 +19,14 @@ pub trait StdLxi {
         Self: Sized,
     {
         let addr = match host.to_socket_addrs()?.next() {
-            None => return Err(anyhow!("Invalid address: {}", host)),
+            None => return Err(anyhow!("Invalid address: {host}")),
             Some(a) => a,
         };
         let mut lxi_dev = LxiTextDevice::new(
             (addr.ip().to_string(), addr.port()),
             Some(time::Duration::new(5, 0)),
         );
-        debug!("Connecting to {:?}...", addr);
+        debug!("Connecting to {addr:?}...");
         // let dev = LxiDevice::new(addr, timeout)
         lxi_dev.connect()?;
         Ok(Self::create(addr, name, lxi_dev))
@@ -44,7 +44,7 @@ pub trait StdLxi {
         S: AsRef<str> + Display,
     {
         if self.verbose() {
-            info!("Send: {} <-- {}", self.name(), s);
+            info!("Send: {name} <-- {s}", name = self.name());
         }
         self.q_send(s.as_ref())
     }
@@ -58,7 +58,7 @@ pub trait StdLxi {
     fn recv(&mut self) -> anyhow::Result<String> {
         let s = self.q_recv()?;
         if self.verbose() {
-            info!("Recv: {} --> {}", self.name(), &s);
+            info!("Recv: {name} --> {s}", name = self.name());
         }
         Ok(s)
     }
@@ -70,7 +70,7 @@ pub trait StdLxi {
         self.q_send(s.as_ref())?;
         let r = self.q_recv()?;
         if self.verbose() {
-            info!("{} --> {} --> {}", s.as_ref(), self.name(), &r);
+            info!("{} --> {} --> {r}", s.as_ref(), self.name());
         }
         Ok(r)
     }
@@ -80,7 +80,7 @@ pub trait StdLxi {
         S: AsRef<str> + Display,
         F: Float + Display,
     {
-        self.send(&format!("{} {}", subsys.as_ref(), v))?;
+        self.send(&format!("{} {v}", subsys.as_ref()))?;
         Ok(v)
     }
 
@@ -88,7 +88,7 @@ pub trait StdLxi {
     where
         S: AsRef<str> + Display,
     {
-        self.send(&format!("{} {}", subsys.as_ref(), state))?;
+        self.send(&format!("{} {state}", subsys.as_ref()))?;
         Ok(state)
     }
 

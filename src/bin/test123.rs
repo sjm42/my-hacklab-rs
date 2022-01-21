@@ -12,7 +12,7 @@ const LAB_POWER: &str = "lab-power.siu.ro:5025";
 fn main() -> anyhow::Result<()> {
     let opts = OptsCommon::from_args();
     start_pgm(&opts, "My Hacklab");
-    debug!("Global config: {:?}", &opts);
+    debug!("Global config: {opts:?}");
 
     let mut lp = SPD3303X::new(LAB_POWER, "PWR".into())?;
     let mut ld = SDL1000X::new(LAB_LOAD, "LOAD".into())?;

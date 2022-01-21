@@ -8,7 +8,6 @@ use crate::StdLxi;
 // https://int.siglent.com/upload_file/user/SDL1000X/SDL1000X_Programming_Guide_V1.0.pdf
 
 #[allow(dead_code)]
-// #[derive(Debug)]
 pub struct SDL1000X {
     addr: SocketAddr,
     name: String,
@@ -43,18 +42,18 @@ impl SDL1000X {
     }
 
     pub fn set_func(&mut self, func: Func) -> anyhow::Result<Func> {
-        self.send(&format!("FUNC {}", func))?;
+        self.send(&format!("FUNC {func}"))?;
         Ok(func)
     }
 
     pub fn meas(&mut self, m: Meas) -> anyhow::Result<f32> {
-        let m = self.req(&format!("meas:{}?", m))?;
+        let m = self.req(&format!("meas:{m}?"))?;
         Ok(m.parse::<f32>()?)
     }
 
     // wave type can be "curr", "volt", "pow", "res"
     pub fn wave(&mut self, m: Meas) -> anyhow::Result<Vec<f32>> {
-        let c = format!("meas:wave? {}", m);
+        let c = format!("meas:wave? {m}");
         let w = self.req(&c)?;
         Ok(w.split(',')
             .map(|x| x.parse::<f32>().unwrap_or_default())

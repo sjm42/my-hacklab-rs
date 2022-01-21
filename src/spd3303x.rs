@@ -8,7 +8,6 @@ use crate::StdLxi;
 // https://int.siglent.com/upload_file/user/SPD3000X/SPD3303X_QuickStart_QS0503X-E01B.pdf
 
 #[allow(dead_code)]
-// #[derive(Debug)]
 pub struct SPD3303X {
     addr: SocketAddr,
     name: String,
@@ -43,7 +42,7 @@ impl SPD3303X {
     }
 
     pub fn meas(&mut self, c: Ch, m: Meas) -> anyhow::Result<f32> {
-        let m = self.req(&format!("meas:{}? {}", m, c))?;
+        let m = self.req(&format!("meas:{m}? {c}"))?;
         Ok(m.parse::<f32>()?)
     }
 }

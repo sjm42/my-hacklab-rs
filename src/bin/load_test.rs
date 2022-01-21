@@ -17,7 +17,7 @@ const DROP_MAX: f32 = 0.20; // 20%
 fn main() -> anyhow::Result<()> {
     let opts = OptsCommon::from_args();
     start_pgm(&opts, "Load test");
-    debug!("Global config: {:?}", &opts);
+    debug!("Global config: {opts:?}");
 
     let mut ld = SDL1000X::new(LAB_LOAD, "LOAD".into())?;
     //ld.verbose = true;
@@ -60,30 +60,24 @@ fn main() -> anyhow::Result<()> {
         let volt = ld.meas(sdl1000x::Meas::Volt)?;
         let drop = 1.0 - volt / volt_initial;
         info!(
-            "Curr: {:.3}A Volt: {:.3}V Power: {:.2}W Drop: {:.1}%",
-            curr,
-            volt,
-            pwr,
-            drop * 100.0
+            "Curr: {curr:.3}A Volt: {volt:.3}V Power: {pwr:.2}W Drop: {drop_pct:.1}%",
+            drop_pct = drop * 100.0
         );
         if volt < volt_thres {
             break;
         }
     }
     if curr > CURR_LIMIT {
-        error!(
-            "Current limit {:.3} A reached, cannot continue.",
-            CURR_LIMIT
-        );
+        error!("Current limit {CURR_LIMIT:.3} A reached, cannot continue.");
         ld.set_state(":input:state", PortState::Off)?;
         ld.set_state("system:sense", PortState::Off)?;
         return Err(anyhow!("Current limit"));
     }
     while curr_step > CURR_START {
         // find the sweet spot with "CURR_START" accuracy
-        info!("*** STEP: {:.3} A", curr_step);
+        info!("*** STEP: {curr_step:.3} A");
         let (stop_curr, steps) = steps_i(&mut ld, volt_thres, curr, curr_step)?;
-        info!("* took {} steps", steps);
+        info!("* took {steps} steps");
         curr = stop_curr;
         if steps < 2 {
             curr_step *= 0.5;
@@ -94,11 +88,8 @@ fn main() -> anyhow::Result<()> {
     let volt = ld.meas(sdl1000x::Meas::Volt)?;
     let drop = 1.0 - volt / volt_initial;
     info!(
-        "Curr: {:.3}A Volt: {:.3}V Power: {:.2}W Drop: {:.1}%",
-        curr,
-        volt,
-        pwr,
-        drop * 100.0
+        "Curr: {curr:.3}A Volt: {volt:.3}V Power: {pwr:.2}W Drop: {drop_pct:.1}%",
+        drop_pct = drop * 100.0
     );
 
     ld.set_state(":input:state", PortState::Off)?;
