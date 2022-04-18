@@ -1,5 +1,7 @@
 // scpi.rs
 
+#![allow(dead_code)]
+
 use anyhow::anyhow;
 use log::*;
 use lxi::*;
@@ -7,7 +9,6 @@ use num::traits::Float;
 use std::net::{SocketAddr, ToSocketAddrs};
 use std::{fmt, fmt::Display, time};
 
-#[allow(dead_code)]
 #[derive(Debug)]
 pub enum PortState {
     On,
@@ -23,6 +24,48 @@ impl fmt::Display for PortState {
     }
 }
 
+#[derive(Debug)]
+pub enum Ch {
+    Ch1,
+    Ch2,
+    Ch3,
+    Ch4,
+}
+impl fmt::Display for Ch {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        let p = match *self {
+            Self::Ch1 => "CH1",
+            Self::Ch2 => "CH2",
+            Self::Ch3 => "CH3",
+            Self::Ch4 => "CH4",
+        };
+        f.write_str(p)
+    }
+}
+
+#[derive(Debug)]
+pub enum Meas {
+    Volt,
+    Curr,
+    Pow,
+    Res,
+    Ext,   // don't ask
+    Dummy, // also don't ask
+}
+impl fmt::Display for Meas {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        let p = match *self {
+            Self::Volt => "VOLT",
+            Self::Curr => "CURR",
+            Self::Pow => "POWER",
+            Self::Res => "RES",
+            Self::Ext => "EXT",
+            Self::Dummy => "###DUMMY###",
+        };
+        f.write_str(p)
+    }
+}
+
 pub struct StdLxi {
     pub name: String,
     pub addr: SocketAddr,
@@ -31,9 +74,12 @@ pub struct StdLxi {
 }
 
 impl LxiCommands for StdLxi {
-    fn create(name: String, addr: SocketAddr, lxi_dev: LxiTextDevice) -> Self {
+    fn create<S>(name: S, addr: SocketAddr, lxi_dev: LxiTextDevice) -> Self
+    where
+        S: AsRef<str>,
+    {
         StdLxi {
-            name,
+            name: name.as_ref().to_owned(),
             addr,
             v: false,
             lxi_dev,
@@ -57,15 +103,18 @@ impl LxiCommands for StdLxi {
 }
 
 pub trait LxiCommands {
-    fn create(name: String, addr: SocketAddr, lxi_dev: LxiTextDevice) -> Self;
+    fn create<S>(name: S, addr: SocketAddr, lxi_dev: LxiTextDevice) -> Self
+    where
+        S: AsRef<str>;
     fn name(&self) -> &str;
     fn addr(&self) -> SocketAddr;
     fn get_v(&self) -> bool;
     fn set_v(&mut self, v: bool);
     fn dev(&mut self) -> &mut LxiTextDevice;
 
-    fn new<H>(name: String, host: H) -> anyhow::Result<Self>
+    fn new<S, H>(name: S, host: H) -> anyhow::Result<Self>
     where
+        S: AsRef<str>,
         H: fmt::Display + AsRef<str> + ToSocketAddrs,
         Self: Sized,
     {

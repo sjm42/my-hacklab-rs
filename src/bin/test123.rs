@@ -14,94 +14,103 @@ fn main() -> anyhow::Result<()> {
     start_pgm(&opts, "My Hacklab");
     debug!("Global config: {opts:?}");
 
-    let mut lp = SPD3303X::new("PWR".into(), LAB_POWER)?;
-    let mut ld = SDL1000X::new("LOAD".into(), LAB_LOAD)?;
-    lp.lxi.v_on();
-    ld.lxi.v_on();
-    info!("Lab PWR at {:?}", lp.lxi.addr());
-    info!("Lab LOAD at {:?}", ld.lxi.addr());
+    let mut pwr = SPD3303X::new("PWR", LAB_POWER)?;
+    let mut load = SDL1000X::new("LOAD", LAB_LOAD)?;
+    pwr.lxi.v_on();
+    load.lxi.v_on();
+    info!("Lab PWR at {:?}", pwr.lxi.addr());
+    info!("Lab LOAD at {:?}", load.lxi.addr());
 
-    lp.idn()?;
-    lp.lan_addr()?;
-    lp.lan_mask()?;
-    lp.lan_gw()?;
+    pwr.idn()?;
+    pwr.lan_addr()?;
+    pwr.lan_mask()?;
+    pwr.lan_gw()?;
 
-    ld.idn()?;
-    ld.lan_mac()?;
-    ld.lan_addr()?;
-    ld.lan_mask()?;
-    ld.lan_gw()?;
+    load.idn()?;
+    load.lan_mac()?;
+    load.lan_addr()?;
+    load.lan_mask()?;
+    load.lan_gw()?;
 
-    ld.lxi.req("func?")?;
-    ld.lxi.get_state("system:sense")?;
-    ld.lxi.set_state(":short:state", PortState::Off)?;
-    ld.lxi.set_state(":input:state", PortState::Off)?;
-    ld.lxi.set_state("system:sense", PortState::On)?;
+    load.lxi.req("func?")?;
+    load.q_sense()?;
+    load.short_off()?;
+    load.input_off()?;
+    load.sense_on()?;
 
-    lp.lxi.send("output:track 0")?;
-    lp.lxi.send("output ch1,off")?;
-    lp.lxi.send("output ch2,off")?;
-    lp.lxi.send("output ch3,off")?;
-    lp.lxi.send("output:wave ch1,off")?;
-    lp.lxi.send("output:wave ch2,off")?;
+    pwr.output_independent()?;
+    pwr.output_off(Ch::Ch1)?;
+    pwr.output_off(Ch::Ch2)?;
+    pwr.output_off(Ch::Ch3)?;
+    pwr.wave_display(Ch::Ch1, PortState::Off)?;
+    pwr.wave_display(Ch::Ch2, PortState::Off)?;
 
-    lp.lxi.set("ch1:volt", 4.250)?;
-    lp.lxi.set("ch1:curr", 0.250)?;
-    lp.lxi.send("output ch1,on")?;
+    pwr.volt(Ch::Ch1, 4.250)?;
+    pwr.curr(Ch::Ch1, 0.250)?;
+    pwr.output_on(Ch::Ch1)?;
+    pwr.status()?;
 
-    ld.lxi.req(":input:state?")?;
-    ld.lxi.req(":short:state?")?;
-    ld.lxi.req(":current:irange?")?;
-    ld.lxi.req(":current:vrange?")?;
+    load.q_sense()?;
+    load.q_input()?;
+    load.q_short()?;
 
-    info!("***");
-    thread::sleep(time::Duration::new(1, 0));
-
-    ld.set_func(sdl1000x::Func::Curr)?;
-    ld.lxi.set(":current:irange", 5.0)?; // 5A or 30A
-    ld.lxi.set(":current:vrange", 36.0)?; // 36V or 150V
-
-    ld.lxi.req(":current:irange?")?;
-    ld.lxi.req(":current:vrange?")?;
-
-    ld.lxi.set(":current", 0.120)?;
-    ld.lxi.set_state(":input:state", PortState::On)?;
-
-    info!("***");
-    thread::sleep(time::Duration::new(2, 0));
-
-    ld.lxi.get_state("system:sense")?;
-    ld.meas(sdl1000x::Meas::Volt)?;
-    ld.meas(sdl1000x::Meas::Curr)?;
-    ld.meas(sdl1000x::Meas::Pow)?;
-    ld.meas(sdl1000x::Meas::Res)?;
-
-    lp.meas(spd3303x::Ch::Ch1, spd3303x::Meas::Volt)?;
-    lp.meas(spd3303x::Ch::Ch1, spd3303x::Meas::Curr)?;
-    lp.meas(spd3303x::Ch::Ch1, spd3303x::Meas::Pow)?;
-
-    info!("***");
-    lp.lxi.set("ch1:volt", 8.500)?;
-    ld.lxi.set(":curr", 0.150)?;
-
-    info!("***");
-    thread::sleep(time::Duration::new(2, 0));
-
-    ld.meas(sdl1000x::Meas::Volt)?;
-    ld.meas(sdl1000x::Meas::Curr)?;
-    ld.meas(sdl1000x::Meas::Pow)?;
-    ld.meas(sdl1000x::Meas::Res)?;
-
-    lp.meas(spd3303x::Ch::Ch1, spd3303x::Meas::Volt)?;
-    lp.meas(spd3303x::Ch::Ch1, spd3303x::Meas::Curr)?;
-    lp.meas(spd3303x::Ch::Ch1, spd3303x::Meas::Pow)?;
+    load.lxi.req(":current:irange?")?;
+    load.lxi.req(":current:vrange?")?;
 
     info!("***");
     thread::sleep(time::Duration::new(1, 0));
 
-    ld.lxi.set_state(":input:state", PortState::Off)?;
-    ld.lxi.set_state("system:sense", PortState::Off)?;
-    lp.lxi.send("output ch1,off")?;
+    load.set_func(sdl1000x::Func::Curr)?;
+    load.lxi.set(":current:irange", 5.0)?; // 5A or 30A
+    load.lxi.set(":current:vrange", 36.0)?; // 36V or 150V
+
+    load.lxi.req(":current:irange?")?;
+    load.lxi.req(":current:vrange?")?;
+
+    load.lxi.set(":current", 0.120)?;
+    load.input_on()?;
+
+    info!("***");
+    thread::sleep(time::Duration::new(2, 0));
+
+    load.q_sense()?;
+    load.m_volt()?;
+    load.m_curr()?;
+    load.m_pow()?;
+    load.m_res()?;
+
+    pwr.q_volt(Ch::Ch1)?;
+    pwr.q_curr(Ch::Ch1)?;
+
+    pwr.m_volt(Ch::Ch1)?;
+    pwr.m_curr(Ch::Ch1)?;
+    pwr.m_pow(Ch::Ch1)?;
+
+    info!("***");
+    pwr.volt(Ch::Ch1, 8.500)?;
+    load.lxi.set(":curr", 0.150)?;
+
+    info!("***");
+    thread::sleep(time::Duration::new(2, 0));
+
+    load.m_volt()?;
+    load.m_curr()?;
+    load.m_pow()?;
+    load.m_res()?;
+
+    pwr.q_volt(Ch::Ch1)?;
+    pwr.q_curr(Ch::Ch1)?;
+
+    pwr.m_volt(Ch::Ch1)?;
+    pwr.m_curr(Ch::Ch1)?;
+    pwr.m_pow(Ch::Ch1)?;
+
+    info!("***");
+    thread::sleep(time::Duration::new(1, 0));
+
+    load.input_off()?;
+    load.sense_off()?;
+    pwr.output_off(Ch::Ch1)?;
 
     Ok(())
 }
