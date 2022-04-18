@@ -14,63 +14,63 @@ fn main() -> anyhow::Result<()> {
     start_pgm(&opts, "My Hacklab");
     debug!("Global config: {opts:?}");
 
-    let mut lp = SPD3303X::new(LAB_POWER, "PWR".into())?;
-    let mut ld = SDL1000X::new(LAB_LOAD, "LOAD".into())?;
-    lp.verbose = true;
-    ld.verbose = true;
-    info!("Lab PWR at {:?}", lp.addr());
-    info!("Lab LOAD at {:?}", ld.addr());
+    let mut lp = SPD3303X::new("PWR".into(), LAB_POWER)?;
+    let mut ld = SDL1000X::new("LOAD".into(), LAB_LOAD)?;
+    lp.lxi.v_on();
+    ld.lxi.v_on();
+    info!("Lab PWR at {:?}", lp.lxi.addr());
+    info!("Lab LOAD at {:?}", ld.lxi.addr());
 
-    lp.req("*IDN?")?;
-    lp.req("ip?")?;
-    lp.req("mask?")?;
-    lp.req("gate?")?;
+    lp.idn()?;
+    lp.lan_addr()?;
+    lp.lan_mask()?;
+    lp.lan_gw()?;
 
-    ld.req("*IDN?")?;
-    ld.req("lan:mac?")?;
-    ld.req("lan:ipad?")?;
-    ld.req("lan:smask?")?;
-    ld.req("lan:gat?")?;
+    ld.idn()?;
+    ld.lan_mac()?;
+    ld.lan_addr()?;
+    ld.lan_mask()?;
+    ld.lan_gw()?;
 
-    ld.req("func?")?;
-    ld.get_state("system:sense")?;
-    ld.set_state(":short:state", PortState::Off)?;
-    ld.set_state(":input:state", PortState::Off)?;
-    ld.set_state("system:sense", PortState::On)?;
+    ld.lxi.req("func?")?;
+    ld.lxi.get_state("system:sense")?;
+    ld.lxi.set_state(":short:state", PortState::Off)?;
+    ld.lxi.set_state(":input:state", PortState::Off)?;
+    ld.lxi.set_state("system:sense", PortState::On)?;
 
-    lp.send("output:track 0")?;
-    lp.send("output ch1,off")?;
-    lp.send("output ch2,off")?;
-    lp.send("output ch3,off")?;
-    lp.send("output:wave ch1,off")?;
-    lp.send("output:wave ch2,off")?;
+    lp.lxi.send("output:track 0")?;
+    lp.lxi.send("output ch1,off")?;
+    lp.lxi.send("output ch2,off")?;
+    lp.lxi.send("output ch3,off")?;
+    lp.lxi.send("output:wave ch1,off")?;
+    lp.lxi.send("output:wave ch2,off")?;
 
-    lp.set("ch1:volt", 4.250)?;
-    lp.set("ch1:curr", 0.250)?;
-    lp.send("output ch1,on")?;
+    lp.lxi.set("ch1:volt", 4.250)?;
+    lp.lxi.set("ch1:curr", 0.250)?;
+    lp.lxi.send("output ch1,on")?;
 
-    ld.req(":input:state?")?;
-    ld.req(":short:state?")?;
-    ld.req(":current:irange?")?;
-    ld.req(":current:vrange?")?;
+    ld.lxi.req(":input:state?")?;
+    ld.lxi.req(":short:state?")?;
+    ld.lxi.req(":current:irange?")?;
+    ld.lxi.req(":current:vrange?")?;
 
     info!("***");
     thread::sleep(time::Duration::new(1, 0));
 
     ld.set_func(sdl1000x::Func::Curr)?;
-    ld.set(":current:irange", 5.0)?; // 5A or 30A
-    ld.set(":current:vrange", 36.0)?; // 36V or 150V
+    ld.lxi.set(":current:irange", 5.0)?; // 5A or 30A
+    ld.lxi.set(":current:vrange", 36.0)?; // 36V or 150V
 
-    ld.req(":current:irange?")?;
-    ld.req(":current:vrange?")?;
+    ld.lxi.req(":current:irange?")?;
+    ld.lxi.req(":current:vrange?")?;
 
-    ld.set(":current", 0.120)?;
-    ld.set_state(":input:state", PortState::On)?;
+    ld.lxi.set(":current", 0.120)?;
+    ld.lxi.set_state(":input:state", PortState::On)?;
 
     info!("***");
     thread::sleep(time::Duration::new(2, 0));
 
-    ld.get_state("system:sense")?;
+    ld.lxi.get_state("system:sense")?;
     ld.meas(sdl1000x::Meas::Volt)?;
     ld.meas(sdl1000x::Meas::Curr)?;
     ld.meas(sdl1000x::Meas::Pow)?;
@@ -81,8 +81,8 @@ fn main() -> anyhow::Result<()> {
     lp.meas(spd3303x::Ch::Ch1, spd3303x::Meas::Pow)?;
 
     info!("***");
-    lp.set("ch1:volt", 8.500)?;
-    ld.set(":curr", 0.150)?;
+    lp.lxi.set("ch1:volt", 8.500)?;
+    ld.lxi.set(":curr", 0.150)?;
 
     info!("***");
     thread::sleep(time::Duration::new(2, 0));
@@ -99,9 +99,9 @@ fn main() -> anyhow::Result<()> {
     info!("***");
     thread::sleep(time::Duration::new(1, 0));
 
-    ld.set_state(":input:state", PortState::Off)?;
-    ld.set_state("system:sense", PortState::Off)?;
-    lp.send("output ch1,off")?;
+    ld.lxi.set_state(":input:state", PortState::Off)?;
+    ld.lxi.set_state("system:sense", PortState::Off)?;
+    lp.lxi.send("output ch1,off")?;
 
     Ok(())
 }

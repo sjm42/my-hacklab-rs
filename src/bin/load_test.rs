@@ -19,26 +19,26 @@ fn main() -> anyhow::Result<()> {
     start_pgm(&opts, "Load test");
     debug!("Global config: {opts:?}");
 
-    let mut ld = SDL1000X::new(LAB_LOAD, "LOAD".into())?;
+    let mut ld = SDL1000X::new("LOAD".into(), LAB_LOAD)?;
     //ld.verbose = true;
-    info!("Lab LOAD at {:?}", ld.addr());
+    info!("Lab LOAD at {:?}", ld.lxi.addr());
 
-    ld.set_state(":short:state", PortState::Off)?;
-    ld.set_state(":input:state", PortState::Off)?;
-    ld.set_state("system:sense", PortState::On)?;
+    ld.lxi.set_state(":short:state", PortState::Off)?;
+    ld.lxi.set_state(":input:state", PortState::Off)?;
+    ld.lxi.set_state("system:sense", PortState::On)?;
 
     info!("***");
     thread::sleep(time::Duration::new(1, 0));
 
     ld.set_func(sdl1000x::Func::Curr)?;
-    ld.set(":current:irange", 5.0)?; // 5A or 30A
-    ld.set(":current:vrange", 36.0)?; // 36V or 150V
+    ld.lxi.set(":current:irange", 5.0)?; // 5A or 30A
+    ld.lxi.set(":current:vrange", 36.0)?; // 36V or 150V
 
-    ld.req(":current:irange?")?;
-    ld.req(":current:vrange?")?;
+    ld.lxi.req(":current:irange?")?;
+    ld.lxi.req(":current:vrange?")?;
 
-    ld.set(":current", CURR_START)?;
-    ld.set_state(":input:state", PortState::On)?;
+    ld.lxi.set(":current", CURR_START)?;
+    ld.lxi.set_state(":input:state", PortState::On)?;
 
     info!("***");
     thread::sleep(time::Duration::new(2, 0));
@@ -51,7 +51,7 @@ fn main() -> anyhow::Result<()> {
     while curr < CURR_LIMIT {
         curr += curr_step;
         curr_step *= 1.5;
-        ld.set(":current", curr)?;
+        ld.lxi.set(":current", curr)?;
 
         thread::sleep(time::Duration::new(2, 0));
         ld.meas(sdl1000x::Meas::Res)?;
@@ -69,8 +69,8 @@ fn main() -> anyhow::Result<()> {
     }
     if curr > CURR_LIMIT {
         error!("Current limit {CURR_LIMIT:.3} A reached, cannot continue.");
-        ld.set_state(":input:state", PortState::Off)?;
-        ld.set_state("system:sense", PortState::Off)?;
+        ld.lxi.set_state(":input:state", PortState::Off)?;
+        ld.lxi.set_state("system:sense", PortState::Off)?;
         return Err(anyhow!("Current limit"));
     }
     while curr_step > CURR_START {
@@ -92,8 +92,8 @@ fn main() -> anyhow::Result<()> {
         drop_pct = drop * 100.0
     );
 
-    ld.set_state(":input:state", PortState::Off)?;
-    ld.set_state("system:sense", PortState::Off)?;
+    ld.lxi.set_state(":input:state", PortState::Off)?;
+    ld.lxi.set_state("system:sense", PortState::Off)?;
 
     Ok(())
 }
@@ -105,7 +105,7 @@ fn steps_i(
     i_start: f32,
     i_step: f32,
 ) -> anyhow::Result<(f32, usize)> {
-    ld.set(":current", i_start)?;
+    ld.lxi.set(":current", i_start)?;
     thread::sleep(time::Duration::new(2, 0));
     let v_initial = ld.meas(sdl1000x::Meas::Volt)?;
 
@@ -118,7 +118,7 @@ fn steps_i(
         n += 1;
         i_now += i_sign * i_step;
 
-        ld.set(":current", i_now)?;
+        ld.lxi.set(":current", i_now)?;
         thread::sleep(time::Duration::new(1, 0));
         let v_now = ld.meas(sdl1000x::Meas::Volt)?;
 

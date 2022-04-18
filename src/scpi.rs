@@ -7,13 +7,64 @@ use num::traits::Float;
 use std::net::{SocketAddr, ToSocketAddrs};
 use std::{fmt, fmt::Display, time};
 
-pub trait StdLxi {
-    fn create(addr: SocketAddr, name: String, lxi_dev: LxiTextDevice) -> Self;
+#[allow(dead_code)]
+#[derive(Debug)]
+pub enum PortState {
+    On,
+    Off,
+}
+impl fmt::Display for PortState {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        let p = match *self {
+            Self::On => "ON",
+            Self::Off => "OFF",
+        };
+        f.write_str(p)
+    }
+}
+
+pub struct StdLxi {
+    pub name: String,
+    pub addr: SocketAddr,
+    pub v: bool,
+    pub lxi_dev: LxiTextDevice,
+}
+
+impl LxiCommands for StdLxi {
+    fn create(name: String, addr: SocketAddr, lxi_dev: LxiTextDevice) -> Self {
+        StdLxi {
+            name,
+            addr,
+            v: false,
+            lxi_dev,
+        }
+    }
+    fn name(&self) -> &str {
+        &self.name
+    }
+    fn addr(&self) -> SocketAddr {
+        self.addr
+    }
+    fn get_v(&self) -> bool {
+        self.v
+    }
+    fn set_v(&mut self, v: bool) {
+        self.v = v;
+    }
+    fn dev(&mut self) -> &mut LxiTextDevice {
+        &mut self.lxi_dev
+    }
+}
+
+pub trait LxiCommands {
+    fn create(name: String, addr: SocketAddr, lxi_dev: LxiTextDevice) -> Self;
     fn name(&self) -> &str;
-    fn verbose(&self) -> bool;
+    fn addr(&self) -> SocketAddr;
+    fn get_v(&self) -> bool;
+    fn set_v(&mut self, v: bool);
     fn dev(&mut self) -> &mut LxiTextDevice;
 
-    fn new<H>(host: H, name: String) -> anyhow::Result<Self>
+    fn new<H>(name: String, host: H) -> anyhow::Result<Self>
     where
         H: fmt::Display + AsRef<str> + ToSocketAddrs,
         Self: Sized,
@@ -29,9 +80,20 @@ pub trait StdLxi {
         debug!("Connecting to {addr:?}...");
         // let dev = LxiDevice::new(addr, timeout)
         lxi_dev.connect()?;
-        Ok(Self::create(addr, name, lxi_dev))
+        Ok(Self::create(name, addr, lxi_dev))
     }
-
+    fn v(&self) -> bool {
+        self.get_v()
+    }
+    fn v_on(&mut self) {
+        self.set_v(true);
+    }
+    fn v_off(&mut self) {
+        self.set_v(false);
+    }
+    fn v_set(&mut self, v: bool) {
+        self.set_v(v)
+    }
     fn q_send<S>(&mut self, s: S) -> anyhow::Result<()>
     where
         S: AsRef<str> + Display,
@@ -43,7 +105,7 @@ pub trait StdLxi {
     where
         S: AsRef<str> + Display,
     {
-        if self.verbose() {
+        if self.v() {
             info!("Send: {name} <-- {s}", name = self.name());
         }
         self.q_send(s.as_ref())
@@ -57,7 +119,7 @@ pub trait StdLxi {
 
     fn recv(&mut self) -> anyhow::Result<String> {
         let s = self.q_recv()?;
-        if self.verbose() {
+        if self.v() {
             info!("Recv: {name} --> {s}", name = self.name());
         }
         Ok(s)
@@ -69,7 +131,7 @@ pub trait StdLxi {
     {
         self.q_send(s.as_ref())?;
         let r = self.q_recv()?;
-        if self.verbose() {
+        if self.v() {
             info!("{} --> {} --> {r}", s.as_ref(), self.name());
         }
         Ok(r)
@@ -109,22 +171,6 @@ pub trait StdLxi {
     {
         let resp = self.get_state(subsys.as_ref())?;
         Ok(matches!(resp, PortState::On))
-    }
-}
-
-#[allow(dead_code)]
-#[derive(Debug)]
-pub enum PortState {
-    On,
-    Off,
-}
-impl fmt::Display for PortState {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        let p = match *self {
-            Self::On => "ON",
-            Self::Off => "OFF",
-        };
-        f.write_str(p)
     }
 }
 // EOF

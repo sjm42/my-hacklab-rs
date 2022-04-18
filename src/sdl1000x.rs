@@ -1,60 +1,58 @@
 // sdl1000x.rs
 
-use lxi::*;
-use std::{fmt, net::SocketAddr};
+use std::{fmt, net::ToSocketAddrs};
 
-use crate::StdLxi;
+use crate::*;
 
 // https://int.siglent.com/upload_file/user/SDL1000X/SDL1000X_Programming_Guide_V1.0.pdf
 
 #[allow(dead_code)]
 pub struct SDL1000X {
-    addr: SocketAddr,
-    name: String,
-    pub verbose: bool,
-    lxi_dev: LxiTextDevice,
-}
-
-impl StdLxi for SDL1000X {
-    fn create(addr: SocketAddr, name: String, lxi_dev: LxiTextDevice) -> Self {
-        SDL1000X {
-            addr,
-            name,
-            verbose: false,
-            lxi_dev,
-        }
-    }
-    fn name(&self) -> &str {
-        &self.name
-    }
-    fn verbose(&self) -> bool {
-        self.verbose
-    }
-    fn dev(&mut self) -> &mut LxiTextDevice {
-        &mut self.lxi_dev
-    }
+    pub lxi: StdLxi,
 }
 
 #[allow(dead_code)]
 impl SDL1000X {
-    pub fn addr(&self) -> &SocketAddr {
-        &self.addr
+    pub fn new<H>(name: String, host: H) -> anyhow::Result<Self>
+    where
+        H: fmt::Display + AsRef<str> + ToSocketAddrs,
+        Self: Sized,
+    {
+        Ok(Self {
+            lxi: StdLxi::new(name, host)?,
+        })
+    }
+
+    pub fn idn(&mut self) -> anyhow::Result<String> {
+        self.lxi.req("*IDN?")
+    }
+    pub fn lan_addr(&mut self) -> anyhow::Result<String> {
+        self.lxi.req("lan:ipad?")
+    }
+    pub fn lan_mask(&mut self) -> anyhow::Result<String> {
+        self.lxi.req("lan:smask?")
+    }
+    pub fn lan_gw(&mut self) -> anyhow::Result<String> {
+        self.lxi.req("lan:gat?")
+    }
+    pub fn lan_mac(&mut self) -> anyhow::Result<String> {
+        self.lxi.req("lan:mac?")
     }
 
     pub fn set_func(&mut self, func: Func) -> anyhow::Result<Func> {
-        self.send(&format!("FUNC {func}"))?;
+        self.lxi.send(&format!("FUNC {func}"))?;
         Ok(func)
     }
 
     pub fn meas(&mut self, m: Meas) -> anyhow::Result<f32> {
-        let m = self.req(&format!("meas:{m}?"))?;
+        let m = self.lxi.req(&format!("meas:{m}?"))?;
         Ok(m.parse::<f32>()?)
     }
 
     // wave type can be "curr", "volt", "pow", "res"
     pub fn wave(&mut self, m: Meas) -> anyhow::Result<Vec<f32>> {
         let c = format!("meas:wave? {m}");
-        let w = self.req(&c)?;
+        let w = self.lxi.req(&c)?;
         Ok(w.split(',')
             .map(|x| x.parse::<f32>().unwrap_or_default())
             .collect::<Vec<f32>>())
