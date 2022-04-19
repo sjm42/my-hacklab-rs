@@ -1,5 +1,4 @@
 // sdl1000x.rs
-
 #![allow(dead_code)]
 
 use anyhow::anyhow;

@@ -1,4 +1,5 @@
 // spd3303x.rs
+#![allow(dead_code)]
 
 use anyhow::anyhow;
 use num::traits::Float;
@@ -8,12 +9,10 @@ use crate::*;
 
 // https://int.siglent.com/upload_file/user/SPD3000X/SPD3303X_QuickStart_QS0503X-E01B.pdf
 
-#[allow(dead_code)]
 pub struct SPD3303X {
     pub lxi: StdLxi,
 }
 
-#[allow(dead_code)]
 impl SPD3303X {
     pub fn new<S, H>(name: S, host: H) -> anyhow::Result<Self>
     where
