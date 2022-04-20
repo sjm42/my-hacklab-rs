@@ -25,6 +25,7 @@ fn main() -> anyhow::Result<()> {
     pwr.lan_addr()?;
     pwr.lan_mask()?;
     pwr.lan_gw()?;
+    info!("PWR status:\n{:#?}", pwr.status()?);
 
     load.idn()?;
     load.lan_mac()?;
@@ -48,7 +49,7 @@ fn main() -> anyhow::Result<()> {
     pwr.volt(Ch::Ch1, 4.250)?;
     pwr.curr(Ch::Ch1, 0.250)?;
     pwr.output_on(Ch::Ch1)?;
-    pwr.status()?;
+    info!("PWR status:\n{:#?}", pwr.status()?);
 
     load.q_sense()?;
     load.q_input()?;
@@ -98,6 +99,7 @@ fn main() -> anyhow::Result<()> {
     load.m_pow()?;
     load.m_res()?;
 
+    info!("PWR status:\n{:#?}", pwr.status()?);
     pwr.q_volt(Ch::Ch1)?;
     pwr.q_curr(Ch::Ch1)?;
 
@@ -111,6 +113,28 @@ fn main() -> anyhow::Result<()> {
     load.input_off()?;
     load.sense_off()?;
     pwr.output_off(Ch::Ch1)?;
+    info!("PWR status:\n{:#?}", pwr.status()?);
+
+    info!("PWR testing modes...");
+    thread::sleep(time::Duration::new(1, 0));
+
+    info!("independent");
+    pwr.output_independent()?;
+    info!("PWR status:\n{:#?}", pwr.status()?);
+    thread::sleep(time::Duration::new(1, 0));
+
+    info!("series");
+    pwr.output_series()?;
+    info!("PWR status:\n{:#?}", pwr.status()?);
+    thread::sleep(time::Duration::new(1, 0));
+
+    info!("parallel");
+    pwr.output_parallel()?;
+    info!("PWR status:\n{:#?}", pwr.status()?);
+    thread::sleep(time::Duration::new(1, 0));
+
+    pwr.output_independent()?;
+    info!("PWR status:\n{:#?}", pwr.status()?);
 
     Ok(())
 }

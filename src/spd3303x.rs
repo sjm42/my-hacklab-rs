@@ -9,6 +9,101 @@ use crate::*;
 
 // https://int.siglent.com/upload_file/user/SPD3000X/SPD3303X_QuickStart_QS0503X-E01B.pdf
 
+#[derive(Debug)]
+pub enum PwrChannelMode {
+    CV, // Constant voltage
+    CC, // Constant current i.e. current limit reached
+}
+
+#[derive(Debug)]
+pub enum PwrOutputMode {
+    NoIdea,
+    Independent,
+    Parallel,
+    SeriesMaybe,
+    CantHappen,
+}
+
+#[derive(Debug)]
+pub enum PwrDisplayMode {
+    Digital,
+    Waveform,
+}
+
+#[derive(Debug)]
+pub struct SPD3303XStatus {
+    pub ch1_mode: PwrChannelMode,
+    pub ch2_mode: PwrChannelMode,
+    pub output_mode: PwrOutputMode,
+    pub ch1: PortState,
+    pub ch2: PortState,
+    pub timer1: PortState,
+    pub timer2: PortState,
+    pub ch1_display: PwrDisplayMode,
+    pub ch2_display: PwrDisplayMode,
+}
+impl SPD3303XStatus {
+    pub fn from_u16(st: u16) -> Self {
+        Self {
+            ch1_mode: if st & 1 == 0 {
+                PwrChannelMode::CV
+            } else {
+                PwrChannelMode::CC
+            },
+            ch2_mode: if st & (1 << 1) == 0 {
+                PwrChannelMode::CV
+            } else {
+                PwrChannelMode::CC
+            },
+            output_mode: match (st & 0b1100) >> 2 {
+                0b00 => PwrOutputMode::NoIdea,
+                0b01 => PwrOutputMode::Independent,
+                0b10 => PwrOutputMode::Parallel,
+                0b11 => PwrOutputMode::SeriesMaybe,
+                _ => PwrOutputMode::CantHappen,
+            },
+            ch1: if st & (1 << 4) == 0 {
+                PortState::Off
+            } else {
+                PortState::On
+            },
+            ch2: if st & (1 << 5) == 0 {
+                PortState::Off
+            } else {
+                PortState::On
+            },
+
+            timer1: if st & (1 << 6) == 0 {
+                PortState::Off
+            } else {
+                PortState::On
+            },
+            timer2: if st & (1 << 7) == 0 {
+                PortState::Off
+            } else {
+                PortState::On
+            },
+            ch1_display: if st & (1 << 8) == 0 {
+                PwrDisplayMode::Digital
+            } else {
+                PwrDisplayMode::Waveform
+            },
+            ch2_display: if st & (1 << 9) == 0 {
+                PwrDisplayMode::Digital
+            } else {
+                PwrDisplayMode::Waveform
+            },
+        }
+    }
+    pub fn from_hex<S>(st_str: S) -> anyhow::Result<Self>
+    where
+        S: AsRef<str>,
+    {
+        let st = u16::from_str_radix(st_str.as_ref(), 16)?;
+        Ok(Self::from_u16(st))
+    }
+}
+
 pub struct SPD3303X {
     pub lxi: StdLxi,
 }
@@ -31,8 +126,13 @@ impl SPD3303X {
     pub fn version(&mut self) -> anyhow::Result<String> {
         self.lxi.req("system: version?")
     }
-    pub fn status(&mut self) -> anyhow::Result<String> {
-        self.lxi.req("system: status?")
+    pub fn status(&mut self) -> anyhow::Result<SPD3303XStatus> {
+        let str_status = self.lxi.req("system: status?")?;
+        if let Some(hex_str) = str_status.strip_prefix("0x") {
+            SPD3303XStatus::from_hex(hex_str)
+        } else {
+            Err(anyhow!("Invalid status format"))
+        }
     }
     pub fn q_error(&mut self) -> anyhow::Result<String> {
         self.lxi.req("system: error?")
