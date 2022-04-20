@@ -23,27 +23,27 @@ fn main() -> anyhow::Result<()> {
     //ld.verbose = true;
     info!("Lab LOAD at {:?}", load.lxi.addr());
 
-    load.lxi.set_state(":short:state", PortState::Off)?;
-    load.lxi.set_state(":input:state", PortState::Off)?;
-    load.lxi.set_state("system:sense", PortState::On)?;
+    load.short_off()?;
+    load.input_off()?;
+    load.sense_on()?;
 
     info!("***");
     thread::sleep(time::Duration::new(1, 0));
 
     load.set_func(sdl1000x::Func::Curr)?;
-    load.lxi.set(":current:irange", 5.0)?; // 5A or 30A
-    load.lxi.set(":current:vrange", 36.0)?; // 36V or 150V
+    load.curr_irange(sdl1000x::IRange::I5A)?;
+    load.curr_vrange(sdl1000x::VRange::V36V)?;
 
     load.lxi.req(":current:irange?")?;
     load.lxi.req(":current:vrange?")?;
 
-    load.lxi.set(":current", CURR_START)?;
+    load.curr_curr(CURR_START)?;
     load.lxi.set_state(":input:state", PortState::On)?;
 
     info!("***");
     thread::sleep(time::Duration::new(2, 0));
 
-    let volt_initial = load.meas(Meas::Volt)?;
+    let volt_initial = load.volt_m()?;
     let volt_thres = volt_initial * (1.0 - DROP_MAX);
     let mut curr_step = CURR_START;
     let mut curr = CURR_START;
@@ -51,13 +51,13 @@ fn main() -> anyhow::Result<()> {
     while curr < CURR_LIMIT {
         curr += curr_step;
         curr_step *= 1.5;
-        load.lxi.set(":current", curr)?;
+        load.curr_curr(curr)?;
 
         thread::sleep(time::Duration::new(2, 0));
-        load.meas(Meas::Res)?;
-        load.meas(Meas::Curr)?;
-        let pwr = load.meas(Meas::Pow)?;
-        let volt = load.meas(Meas::Volt)?;
+        load.res_m()?;
+        load.curr_m()?;
+        let pwr = load.powr_m()?;
+        let volt = load.volt_m()?;
         let drop = 1.0 - volt / volt_initial;
         info!(
             "Curr: {curr:.3}A Volt: {volt:.3}V Power: {pwr:.2}W Drop: {drop_pct:.1}%",
@@ -84,8 +84,8 @@ fn main() -> anyhow::Result<()> {
         }
     }
 
-    let pwr = load.meas(Meas::Pow)?;
-    let volt = load.meas(Meas::Volt)?;
+    let pwr = load.powr_m()?;
+    let volt = load.volt_m()?;
     let drop = 1.0 - volt / volt_initial;
     info!(
         "Curr: {curr:.3}A Volt: {volt:.3}V Power: {pwr:.2}W Drop: {drop_pct:.1}%",
@@ -105,9 +105,9 @@ fn steps_i(
     i_start: f32,
     i_step: f32,
 ) -> anyhow::Result<(f32, usize)> {
-    ld.lxi.set(":current", i_start)?;
+    ld.curr_curr(i_start)?;
     thread::sleep(time::Duration::new(2, 0));
-    let v_initial = ld.meas(Meas::Volt)?;
+    let v_initial = ld.volt_m()?;
 
     // increase or decrease current?
     let i_sign = signum(v_initial - v_thres);
@@ -118,9 +118,9 @@ fn steps_i(
         n += 1;
         i_now += i_sign * i_step;
 
-        ld.lxi.set(":current", i_now)?;
+        ld.curr_curr(i_now)?;
         thread::sleep(time::Duration::new(1, 0));
-        let v_now = ld.meas(Meas::Volt)?;
+        let v_now = ld.volt_m()?;
 
         // did we cross the threshold?
         if (signum(v_now - v_thres) - i_sign).abs() > 0.1 {

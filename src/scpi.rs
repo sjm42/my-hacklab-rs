@@ -7,6 +7,7 @@ use log::*;
 use lxi::*;
 use num::traits::Float;
 use std::net::{SocketAddr, ToSocketAddrs};
+use std::str::FromStr;
 use std::{fmt, fmt::Display, time};
 
 #[derive(Debug)]
@@ -47,7 +48,7 @@ impl fmt::Display for Ch {
 pub enum Meas {
     Volt,
     Curr,
-    Pow,
+    Powr,
     Res,
     Ext,   // don't ask
     Dummy, // also don't ask
@@ -57,7 +58,7 @@ impl fmt::Display for Meas {
         let p = match *self {
             Self::Volt => "VOLT",
             Self::Curr => "CURR",
-            Self::Pow => "POWER",
+            Self::Powr => "POWER",
             Self::Res => "RES",
             Self::Ext => "EXT",
             Self::Dummy => "###DUMMY###",
@@ -186,13 +187,30 @@ pub trait LxiCommands {
         Ok(r)
     }
 
-    fn set<S, F>(&mut self, subsys: S, v: F) -> anyhow::Result<F>
+    fn set_f<S, F>(&mut self, subsys: S, v: F) -> anyhow::Result<F>
     where
         S: AsRef<str> + Display,
         F: Float + Display,
     {
         self.send(&format!("{} {v}", subsys.as_ref()))?;
         Ok(v)
+    }
+
+    fn set_s<S>(&mut self, subsys: S, v: S) -> anyhow::Result<S>
+    where
+        S: AsRef<str> + Display,
+    {
+        self.send(&format!("{} {}", subsys.as_ref(), v.as_ref()))?;
+        Ok(v)
+    }
+
+    fn get_f<S, F>(&mut self, subsys: S) -> anyhow::Result<F>
+    where
+        S: AsRef<str> + Display,
+        F: Float + Display + FromStr<Err = anyhow::Error>,
+    {
+        let m = self.req(subsys.as_ref())?;
+        m.parse::<F>()
     }
 
     fn set_state<S>(&mut self, subsys: S, state: PortState) -> anyhow::Result<PortState>
@@ -207,7 +225,7 @@ pub trait LxiCommands {
     where
         S: AsRef<str> + Display,
     {
-        let resp = self.req(&format!("{}?", subsys.as_ref()))?;
+        let resp = self.req(subsys.as_ref())?;
         Ok(match resp.as_str() {
             "1" | "on" | "ON" => PortState::On,
             _ => PortState::Off,

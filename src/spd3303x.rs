@@ -17,11 +17,10 @@ pub enum PwrChannelMode {
 
 #[derive(Debug)]
 pub enum PwrOutputMode {
-    NoIdea,
+    Invalid,
     Independent,
     Parallel,
-    SeriesMaybe,
-    CantHappen,
+    Series,
 }
 
 #[derive(Debug)]
@@ -32,35 +31,24 @@ pub enum PwrDisplayMode {
 
 #[derive(Debug)]
 pub struct SPD3303XStatus {
-    pub ch1_mode: PwrChannelMode,
-    pub ch2_mode: PwrChannelMode,
     pub output_mode: PwrOutputMode,
     pub ch1: PortState,
     pub ch2: PortState,
-    pub timer1: PortState,
-    pub timer2: PortState,
+    pub ch1_mode: PwrChannelMode,
+    pub ch2_mode: PwrChannelMode,
     pub ch1_display: PwrDisplayMode,
     pub ch2_display: PwrDisplayMode,
+    pub timer1: PortState,
+    pub timer2: PortState,
 }
 impl SPD3303XStatus {
     pub fn from_u16(st: u16) -> Self {
         Self {
-            ch1_mode: if st & 1 == 0 {
-                PwrChannelMode::CV
-            } else {
-                PwrChannelMode::CC
-            },
-            ch2_mode: if st & (1 << 1) == 0 {
-                PwrChannelMode::CV
-            } else {
-                PwrChannelMode::CC
-            },
             output_mode: match (st & 0b1100) >> 2 {
-                0b00 => PwrOutputMode::NoIdea,
                 0b01 => PwrOutputMode::Independent,
                 0b10 => PwrOutputMode::Parallel,
-                0b11 => PwrOutputMode::SeriesMaybe,
-                _ => PwrOutputMode::CantHappen,
+                0b11 => PwrOutputMode::Series,
+                _ => PwrOutputMode::Invalid,
             },
             ch1: if st & (1 << 4) == 0 {
                 PortState::Off
@@ -72,16 +60,15 @@ impl SPD3303XStatus {
             } else {
                 PortState::On
             },
-
-            timer1: if st & (1 << 6) == 0 {
-                PortState::Off
+            ch1_mode: if st & 1 == 0 {
+                PwrChannelMode::CV
             } else {
-                PortState::On
+                PwrChannelMode::CC
             },
-            timer2: if st & (1 << 7) == 0 {
-                PortState::Off
+            ch2_mode: if st & (1 << 1) == 0 {
+                PwrChannelMode::CV
             } else {
-                PortState::On
+                PwrChannelMode::CC
             },
             ch1_display: if st & (1 << 8) == 0 {
                 PwrDisplayMode::Digital
@@ -92,6 +79,16 @@ impl SPD3303XStatus {
                 PwrDisplayMode::Digital
             } else {
                 PwrDisplayMode::Waveform
+            },
+            timer1: if st & (1 << 6) == 0 {
+                PortState::Off
+            } else {
+                PortState::On
+            },
+            timer2: if st & (1 << 7) == 0 {
+                PortState::Off
+            } else {
+                PortState::On
             },
         }
     }
@@ -120,35 +117,35 @@ impl SPD3303X {
         })
     }
 
-    pub fn idn(&mut self) -> anyhow::Result<String> {
+    pub fn idn_q(&mut self) -> anyhow::Result<String> {
         self.lxi.req("*IDN?")
     }
-    pub fn version(&mut self) -> anyhow::Result<String> {
-        self.lxi.req("system: version?")
+    pub fn version_q(&mut self) -> anyhow::Result<String> {
+        self.lxi.req("SYST:VERS?")
     }
-    pub fn status(&mut self) -> anyhow::Result<SPD3303XStatus> {
-        let str_status = self.lxi.req("system: status?")?;
+    pub fn status_q(&mut self) -> anyhow::Result<SPD3303XStatus> {
+        let str_status = self.lxi.req("SYST:STAT?")?;
         if let Some(hex_str) = str_status.strip_prefix("0x") {
             SPD3303XStatus::from_hex(hex_str)
         } else {
             Err(anyhow!("Invalid status format"))
         }
     }
-    pub fn q_error(&mut self) -> anyhow::Result<String> {
-        self.lxi.req("system: error?")
+    pub fn error_q(&mut self) -> anyhow::Result<String> {
+        self.lxi.req("SYST:ERR?")
     }
 
-    pub fn lan_addr(&mut self) -> anyhow::Result<String> {
-        self.lxi.req("ip?")
+    pub fn lan_addr_q(&mut self) -> anyhow::Result<String> {
+        self.lxi.req("IP?")
     }
-    pub fn lan_mask(&mut self) -> anyhow::Result<String> {
-        self.lxi.req("mask?")
+    pub fn lan_mask_q(&mut self) -> anyhow::Result<String> {
+        self.lxi.req("MASK?")
     }
-    pub fn lan_gw(&mut self) -> anyhow::Result<String> {
-        self.lxi.req("gate?")
+    pub fn lan_gw_q(&mut self) -> anyhow::Result<String> {
+        self.lxi.req("GATE?")
     }
 
-    pub fn meas(&mut self, c: Ch, m: Meas) -> anyhow::Result<f32> {
+    pub fn meas_q(&mut self, c: Ch, m: Meas) -> anyhow::Result<f32> {
         match c {
             Ch::Ch1 | Ch::Ch2 => {}
             _ => {
@@ -156,40 +153,40 @@ impl SPD3303X {
             }
         }
         match m {
-            Meas::Volt | Meas::Curr | Meas::Pow => {}
+            Meas::Volt | Meas::Curr | Meas::Powr => {}
             _ => {
                 return Err(anyhow!("Device cannot measure {m}"));
             }
         }
-        let m = self.lxi.req(&format!("meas:{m}? {c}"))?;
+        let m = self.lxi.req(&format!("MEAS:{m}? {c}"))?;
         Ok(m.parse::<f32>()?)
     }
-    pub fn m_volt(&mut self, c: Ch) -> anyhow::Result<f32> {
-        self.meas(c, Meas::Volt)
+    pub fn volt_m(&mut self, c: Ch) -> anyhow::Result<f32> {
+        self.meas_q(c, Meas::Volt)
     }
-    pub fn m_curr(&mut self, c: Ch) -> anyhow::Result<f32> {
-        self.meas(c, Meas::Curr)
+    pub fn curr_m(&mut self, c: Ch) -> anyhow::Result<f32> {
+        self.meas_q(c, Meas::Curr)
     }
-    pub fn m_pow(&mut self, c: Ch) -> anyhow::Result<f32> {
-        self.meas(c, Meas::Pow)
+    pub fn powr_m(&mut self, c: Ch) -> anyhow::Result<f32> {
+        self.meas_q(c, Meas::Powr)
     }
 
     pub fn volt<F>(&mut self, c: Ch, v: F) -> anyhow::Result<F>
     where
         F: Float + Display,
     {
-        self.lxi.set(format!("{c}:volt"), v)?;
+        self.lxi.set_f(format!("{c}:VOLT"), v)?;
         Ok(v)
     }
     pub fn curr<F>(&mut self, c: Ch, v: F) -> anyhow::Result<F>
     where
         F: Float + Display,
     {
-        self.lxi.set(format!("{c}:curr"), v)?;
+        self.lxi.set_f(format!("{c}:CURR"), v)?;
         Ok(v)
     }
 
-    fn q_param<S>(&mut self, c: Ch, param: S) -> anyhow::Result<f32>
+    fn param_q<S>(&mut self, c: Ch, param: S) -> anyhow::Result<f32>
     where
         S: AsRef<str>,
     {
@@ -203,24 +200,24 @@ impl SPD3303X {
         Ok(m.parse::<f32>()?)
     }
 
-    pub fn q_volt(&mut self, c: Ch) -> anyhow::Result<f32> {
-        self.q_param(c, "volt")
+    pub fn volt_q(&mut self, c: Ch) -> anyhow::Result<f32> {
+        self.param_q(c, "VOLT")
     }
-    pub fn q_curr(&mut self, c: Ch) -> anyhow::Result<f32> {
-        self.q_param(c, "curr")
+    pub fn curr_q(&mut self, c: Ch) -> anyhow::Result<f32> {
+        self.param_q(c, "CURR")
     }
 
     pub fn output_independent(&mut self) -> anyhow::Result<()> {
-        self.lxi.send("output:track 0")
+        self.lxi.send("OUTPUT:TRACK 0")
     }
     pub fn output_series(&mut self) -> anyhow::Result<()> {
-        self.lxi.send("output:track 1")
+        self.lxi.send("OUTPUT:TRACK 1")
     }
     pub fn output_parallel(&mut self) -> anyhow::Result<()> {
-        self.lxi.send("output:track 2")
+        self.lxi.send("OUTPUT:TRACK 2")
     }
     pub fn wave_display(&mut self, c: Ch, mode: PortState) -> anyhow::Result<()> {
-        self.lxi.send(format!("output:wave {c},{mode}"))
+        self.lxi.send(format!("OUTPUT:WAVE {c},{mode}"))
     }
     pub fn output_state(&mut self, c: Ch, state: PortState) -> anyhow::Result<()> {
         match c {
@@ -229,7 +226,7 @@ impl SPD3303X {
                 return Err(anyhow!("Device does not have output {c}"));
             }
         }
-        self.lxi.send(format!("output {c},{state}"))
+        self.lxi.send(format!("OUTPUT {c},{state}"))
     }
     pub fn output_on(&mut self, c: Ch) -> anyhow::Result<()> {
         self.output_state(c, PortState::On)

@@ -2,7 +2,8 @@
 #![allow(dead_code)]
 
 use anyhow::anyhow;
-use std::{fmt, net::ToSocketAddrs};
+use num::traits::Float;
+use std::{fmt, fmt::Display, net::ToSocketAddrs};
 
 use crate::*;
 
@@ -24,62 +25,62 @@ impl SDL1000X {
         })
     }
 
-    pub fn idn(&mut self) -> anyhow::Result<String> {
+    pub fn idn_q(&mut self) -> anyhow::Result<String> {
         self.lxi.req("*IDN?")
     }
-    pub fn lan_addr(&mut self) -> anyhow::Result<String> {
-        self.lxi.req("lan:ipad?")
+    pub fn lan_addr_q(&mut self) -> anyhow::Result<String> {
+        self.lxi.req("LAN:IPAD?")
     }
-    pub fn lan_mask(&mut self) -> anyhow::Result<String> {
-        self.lxi.req("lan:smask?")
+    pub fn lan_mask_q(&mut self) -> anyhow::Result<String> {
+        self.lxi.req("LAN:SMASK?")
     }
-    pub fn lan_gw(&mut self) -> anyhow::Result<String> {
-        self.lxi.req("lan:gat?")
+    pub fn lan_gw_q(&mut self) -> anyhow::Result<String> {
+        self.lxi.req("LAN:GAT?")
     }
-    pub fn lan_mac(&mut self) -> anyhow::Result<String> {
-        self.lxi.req("lan:mac?")
+    pub fn lan_mac_q(&mut self) -> anyhow::Result<String> {
+        self.lxi.req("LAN:MAC?")
     }
 
     pub fn set_func(&mut self, func: Func) -> anyhow::Result<Func> {
-        self.lxi.send(&format!(":func {func}"))?;
+        self.lxi.send(&format!(":FUNC {func}"))?;
         Ok(func)
     }
     pub fn get_func(&mut self) -> anyhow::Result<Func> {
-        self.lxi.req(":func?")?;
+        self.lxi.req(":FUNC?")?;
 
         Ok(Func::Curr)
     }
 
-    pub fn meas(&mut self, m: Meas) -> anyhow::Result<f32> {
+    pub fn meas_q(&mut self, m: Meas) -> anyhow::Result<f32> {
         match m {
-            Meas::Volt | Meas::Curr | Meas::Pow | Meas::Res | Meas::Ext => {}
+            Meas::Volt | Meas::Curr | Meas::Powr | Meas::Res | Meas::Ext => {}
             _ => {
                 return Err(anyhow!("Device cannot measure {m}"));
             }
         }
 
-        let m = self.lxi.req(&format!("meas:{m}?"))?;
+        let m = self.lxi.req(&format!("MEAS:{m}?"))?;
         Ok(m.parse::<f32>()?)
     }
-    pub fn m_volt(&mut self) -> anyhow::Result<f32> {
-        self.meas(Meas::Volt)
+    pub fn volt_m(&mut self) -> anyhow::Result<f32> {
+        self.meas_q(Meas::Volt)
     }
-    pub fn m_curr(&mut self) -> anyhow::Result<f32> {
-        self.meas(Meas::Curr)
+    pub fn curr_m(&mut self) -> anyhow::Result<f32> {
+        self.meas_q(Meas::Curr)
     }
-    pub fn m_pow(&mut self) -> anyhow::Result<f32> {
-        self.meas(Meas::Pow)
+    pub fn powr_m(&mut self) -> anyhow::Result<f32> {
+        self.meas_q(Meas::Powr)
     }
-    pub fn m_res(&mut self) -> anyhow::Result<f32> {
-        self.meas(Meas::Res)
+    pub fn res_m(&mut self) -> anyhow::Result<f32> {
+        self.meas_q(Meas::Res)
     }
-    pub fn m_ext(&mut self) -> anyhow::Result<f32> {
-        self.meas(Meas::Ext)
+    pub fn ext_m(&mut self) -> anyhow::Result<f32> {
+        self.meas_q(Meas::Ext)
     }
 
     // wave type can be "curr", "volt", "pow", "res"
-    pub fn wave(&mut self, m: Meas) -> anyhow::Result<Vec<f32>> {
-        let c = format!("meas:wave? {m}");
+    pub fn wave_q(&mut self, m: Meas) -> anyhow::Result<Vec<f32>> {
+        let c = format!("MEAS:WAVE? {m}");
         let w = self.lxi.req(&c)?;
         Ok(w.split(',')
             .map(|x| x.parse::<f32>().unwrap_or_default())
@@ -87,7 +88,7 @@ impl SDL1000X {
     }
 
     pub fn sense(&mut self, state: PortState) -> anyhow::Result<PortState> {
-        self.lxi.set_state("system:sense", state)
+        self.lxi.set_state("SYST:SENS", state)
     }
     pub fn sense_on(&mut self) -> anyhow::Result<PortState> {
         self.sense(PortState::On)
@@ -95,12 +96,12 @@ impl SDL1000X {
     pub fn sense_off(&mut self) -> anyhow::Result<PortState> {
         self.sense(PortState::Off)
     }
-    pub fn q_sense(&mut self) -> anyhow::Result<PortState> {
-        self.lxi.get_state("system:sense")
+    pub fn sense_q(&mut self) -> anyhow::Result<PortState> {
+        self.lxi.get_state("SYST:SENS?")
     }
 
     pub fn input(&mut self, state: PortState) -> anyhow::Result<PortState> {
-        self.lxi.set_state(":input:state", state)
+        self.lxi.set_state(":INP:STAT", state)
     }
     pub fn input_on(&mut self) -> anyhow::Result<PortState> {
         self.input(PortState::On)
@@ -108,12 +109,12 @@ impl SDL1000X {
     pub fn input_off(&mut self) -> anyhow::Result<PortState> {
         self.input(PortState::Off)
     }
-    pub fn q_input(&mut self) -> anyhow::Result<PortState> {
-        self.lxi.get_state(":input:state")
+    pub fn input_q(&mut self) -> anyhow::Result<PortState> {
+        self.lxi.get_state(":INP:STAT?")
     }
 
     pub fn short(&mut self, state: PortState) -> anyhow::Result<PortState> {
-        self.lxi.set_state(":short:state", state)
+        self.lxi.set_state(":SHOR:STAT", state)
     }
     pub fn short_on(&mut self) -> anyhow::Result<PortState> {
         self.short(PortState::On)
@@ -121,12 +122,35 @@ impl SDL1000X {
     pub fn short_off(&mut self) -> anyhow::Result<PortState> {
         self.short(PortState::Off)
     }
-    pub fn q_short(&mut self) -> anyhow::Result<PortState> {
-        self.lxi.get_state(":short:state")
+    pub fn short_q(&mut self) -> anyhow::Result<PortState> {
+        self.lxi.get_state(":SHOR:STAT?")
+    }
+
+    pub fn curr_irange(&mut self, v: IRange) -> anyhow::Result<()> {
+        self.lxi.set_s(":CURR:IRANG", &v.to_string())?;
+        Ok(())
+    }
+    pub fn curr_irange_q(&mut self) -> anyhow::Result<IRange> {
+        IRange::from_str(self.lxi.req(":CURR:IRANG?")?)
+    }
+    pub fn curr_vrange(&mut self, v: VRange) -> anyhow::Result<()> {
+        self.lxi.set_s(":CURR:VRANG", &v.to_string())?;
+        Ok(())
+    }
+    pub fn curr_vrange_q(&mut self) -> anyhow::Result<VRange> {
+        VRange::from_str(self.lxi.req(":CURR:VRANG?")?)
+    }
+
+    pub fn curr_curr<F>(&mut self, v: F) -> anyhow::Result<()>
+    where
+        F: Float + Display,
+    {
+        self.lxi.set_f(":CURR", v)?;
+        Ok(())
     }
 }
 
-#[derive(Debug)]
+#[derive(Clone, Copy, Debug)]
 pub enum Func {
     Curr,
     Volt,
@@ -142,6 +166,71 @@ impl fmt::Display for Func {
             Self::Pow => "POW",
             Self::Res => "RES",
             Self::Led => "LED",
+        };
+        f.write_str(p)
+    }
+}
+
+#[derive(Clone, Copy, Debug)]
+pub enum IRange {
+    I5A = 5,
+    I30A = 30,
+}
+impl fmt::Display for IRange {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        f.write_str((*self as usize).to_string().as_str())
+    }
+}
+impl IRange {
+    pub fn from_str<S>(s: S) -> anyhow::Result<Self>
+    where
+        S: AsRef<str>,
+    {
+        match s.as_ref().parse::<u32>()? {
+            5 => Ok(Self::I5A),
+            30 => Ok(Self::I30A),
+            x => Err(anyhow!("Unknown IRange {x}")),
+        }
+    }
+}
+
+#[derive(Clone, Copy, Debug)]
+pub enum VRange {
+    V36V = 36,
+    V150V = 150,
+}
+impl fmt::Display for VRange {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        f.write_str((*self as usize).to_string().as_str())
+    }
+}
+impl VRange {
+    pub fn from_str<S>(s: S) -> anyhow::Result<Self>
+    where
+        S: AsRef<str>,
+    {
+        match s.as_ref().parse::<u32>()? {
+            36 => Ok(Self::V36V),
+            150 => Ok(Self::V150V),
+            x => Err(anyhow!("Unknown VRange {x}")),
+        }
+    }
+}
+
+#[derive(Clone, Copy, Debug)]
+pub enum RRange {
+    Low,
+    Middle,
+    High,
+    Upper,
+}
+impl fmt::Display for RRange {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        let p = match *self {
+            Self::Low => "LOW",
+            Self::Middle => "MIDDLE",
+            Self::High => "HIGH",
+            Self::Upper => "UPPER",
         };
         f.write_str(p)
     }
