@@ -207,10 +207,14 @@ pub trait LxiCommands {
     fn get_f<S, F>(&mut self, subsys: S) -> anyhow::Result<F>
     where
         S: AsRef<str> + Display,
-        F: Float + Display + FromStr<Err = anyhow::Error>,
+        F: Float + Display + FromStr,
     {
         let m = self.req(subsys.as_ref())?;
-        m.parse::<F>()
+        if let Ok(f) = m.parse::<F>() {
+            Ok(f)
+        } else {
+            Err(anyhow!("Cannot parse {}", m))
+        }
     }
 
     fn set_state<S>(&mut self, subsys: S, state: PortState) -> anyhow::Result<PortState>

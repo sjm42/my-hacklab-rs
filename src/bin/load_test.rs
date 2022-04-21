@@ -30,7 +30,7 @@ fn main() -> anyhow::Result<()> {
     info!("***");
     thread::sleep(time::Duration::new(1, 0));
 
-    load.set_func(sdl1000x::Func::Curr)?;
+    load.func(sdl1000x::Func::Curr)?;
     load.curr_irange(sdl1000x::IRange::I5A)?;
     load.curr_vrange(sdl1000x::VRange::V36V)?;
 

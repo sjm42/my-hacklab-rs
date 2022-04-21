@@ -40,6 +40,9 @@ fn main() -> anyhow::Result<()> {
     load.short_off()?;
     load.input_off()?;
     load.sense_on()?;
+    load.func(sdl1000x::Func::Curr)?;
+    load.curr_irange(sdl1000x::IRange::I5A)?;
+    load.curr_vrange(sdl1000x::VRange::V36V)?;
 
     info!("PWR setting up");
     pwr.output_independent()?;
@@ -61,10 +64,6 @@ fn main() -> anyhow::Result<()> {
     info!("LOAD input: {}", load.input_q()?);
     info!("LOAD short: {}", load.short_q()?);
 
-    info!("LOAD setting IRange+VRange");
-    load.set_func(sdl1000x::Func::Curr)?;
-    load.curr_irange(sdl1000x::IRange::I5A)?;
-    load.curr_vrange(sdl1000x::VRange::V36V)?;
     info!("LOAD IRange: {}", load.curr_irange_q()?);
     info!("LOAD VRange: {}", load.curr_vrange_q()?);
 
@@ -118,6 +117,72 @@ fn main() -> anyhow::Result<()> {
     load.sense_off()?;
     pwr.output_off(Ch::Ch1)?;
     info!("PWR status:\n{:#?}", pwr.status_q()?);
+
+    info!("LOAD testing functions");
+
+    info!("LOAD func CURR");
+    load.func(sdl1000x::Func::Curr)?;
+    thread::sleep(time::Duration::new(1, 0));
+    info!("Function is: {}", load.func_q()?);
+
+    info!("LOAD func VOLT");
+    load.func(sdl1000x::Func::Volt)?;
+    thread::sleep(time::Duration::new(1, 0));
+    info!("Function is: {}", load.func_q()?);
+
+    info!("LOAD func POW");
+    load.func(sdl1000x::Func::Powr)?;
+    thread::sleep(time::Duration::new(1, 0));
+    info!("Function is: {}", load.func_q()?);
+
+    info!("LOAD func RES");
+    load.func(sdl1000x::Func::Res)?;
+    thread::sleep(time::Duration::new(1, 0));
+    info!("Function is: {}", load.func_q()?);
+
+    info!("LOAD func LED");
+    load.func(sdl1000x::Func::Led)?;
+    thread::sleep(time::Duration::new(1, 0));
+    info!("Function is: {}", load.func_q()?);
+
+    info!("LOAD testing slew");
+    load.func(sdl1000x::Func::Curr)?;
+
+    load.curr_slew_p(sdl1000x::Slew::Min)?;
+    load.curr_slew_n(sdl1000x::Slew::Min)?;
+    thread::sleep(time::Duration::new(1, 0));
+    info!(
+        "MIN slew: {} {}",
+        load.curr_slew_p_q()?,
+        load.curr_slew_n_q()?
+    );
+
+    load.curr_slew_p(sdl1000x::Slew::Max)?;
+    load.curr_slew_n(sdl1000x::Slew::Max)?;
+    thread::sleep(time::Duration::new(1, 0));
+    info!(
+        "MAX slew: {} {}",
+        load.curr_slew_p_q()?,
+        load.curr_slew_n_q()?
+    );
+
+    load.curr_slew_p(sdl1000x::Slew::Default)?;
+    load.curr_slew_n(sdl1000x::Slew::Default)?;
+    thread::sleep(time::Duration::new(1, 0));
+    info!(
+        "DEFAULT slew: {} {}",
+        load.curr_slew_p_q()?,
+        load.curr_slew_n_q()?
+    );
+
+    load.curr_slew_p(sdl1000x::Slew::APerUs(0.042))?;
+    load.curr_slew_n(sdl1000x::Slew::APerUs(0.42))?;
+    thread::sleep(time::Duration::new(1, 0));
+    info!(
+        "Value slew: {} {}",
+        load.curr_slew_p_q()?,
+        load.curr_slew_n_q()?
+    );
 
     Ok(())
 }

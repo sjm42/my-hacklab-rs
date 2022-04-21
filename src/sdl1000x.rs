@@ -3,11 +3,14 @@
 
 use anyhow::anyhow;
 use num::traits::Float;
-use std::{fmt, fmt::Display, net::ToSocketAddrs};
+use std::{fmt, fmt::Display, net::ToSocketAddrs, str::FromStr};
 
 use crate::*;
 
 // https://int.siglent.com/upload_file/user/SDL1000X/SDL1000X_Programming_Guide_V1.0.pdf
+
+const SLEW_MIN: f32 = 0.001;
+const SLEW_MAX: f32 = 0.500;
 
 pub struct SDL1000X {
     pub lxi: StdLxi,
@@ -41,14 +44,12 @@ impl SDL1000X {
         self.lxi.req("LAN:MAC?")
     }
 
-    pub fn set_func(&mut self, func: Func) -> anyhow::Result<Func> {
+    pub fn func(&mut self, func: Func) -> anyhow::Result<Func> {
         self.lxi.send(&format!(":FUNC {func}"))?;
         Ok(func)
     }
-    pub fn get_func(&mut self) -> anyhow::Result<Func> {
-        self.lxi.req(":FUNC?")?;
-
-        Ok(Func::Curr)
+    pub fn func_q(&mut self) -> anyhow::Result<Func> {
+        Func::from_str(self.lxi.req(":FUNC?")?.as_str())
     }
 
     pub fn meas_q(&mut self, m: Meas) -> anyhow::Result<f32> {
@@ -59,8 +60,7 @@ impl SDL1000X {
             }
         }
 
-        let m = self.lxi.req(&format!("MEAS:{m}?"))?;
-        Ok(m.parse::<f32>()?)
+        self.lxi.get_f(&format!("MEAS:{m}?"))
     }
     pub fn volt_m(&mut self) -> anyhow::Result<f32> {
         self.meas_q(Meas::Volt)
@@ -131,16 +131,15 @@ impl SDL1000X {
         Ok(())
     }
     pub fn curr_irange_q(&mut self) -> anyhow::Result<IRange> {
-        IRange::from_str(self.lxi.req(":CURR:IRANG?")?)
+        IRange::from_str(self.lxi.req(":CURR:IRANG?")?.as_str())
     }
     pub fn curr_vrange(&mut self, v: VRange) -> anyhow::Result<()> {
         self.lxi.set_s(":CURR:VRANG", &v.to_string())?;
         Ok(())
     }
     pub fn curr_vrange_q(&mut self) -> anyhow::Result<VRange> {
-        VRange::from_str(self.lxi.req(":CURR:VRANG?")?)
+        VRange::from_str(self.lxi.req(":CURR:VRANG?")?.as_str())
     }
-
     pub fn curr_curr<F>(&mut self, v: F) -> anyhow::Result<()>
     where
         F: Float + Display,
@@ -148,26 +147,64 @@ impl SDL1000X {
         self.lxi.set_f(":CURR", v)?;
         Ok(())
     }
+    pub fn slew_check(slew: Slew) -> anyhow::Result<()> {
+        if let Slew::APerUs(val) = slew {
+            if val < SLEW_MIN {
+                return Err(anyhow!("Slew {} too low, min={}", slew, SLEW_MIN));
+            } else if val > SLEW_MAX {
+                return Err(anyhow!("Slew {} too high, max={}", slew, SLEW_MAX));
+            }
+        }
+        Ok(())
+    }
+    pub fn curr_slew_p(&mut self, slew: Slew) -> anyhow::Result<()> {
+        Self::slew_check(slew)?;
+        self.lxi.set_s(":CURR:SLEW:POS", &slew.to_string())?;
+        Ok(())
+    }
+    pub fn curr_slew_n(&mut self, slew: Slew) -> anyhow::Result<()> {
+        Self::slew_check(slew)?;
+        self.lxi.set_s(":CURR:SLEW:NEG", &slew.to_string())?;
+        Ok(())
+    }
+    pub fn curr_slew_p_q(&mut self) -> anyhow::Result<f32> {
+        self.lxi.get_f(":CURR:SLEW:POS?")
+    }
+    pub fn curr_slew_n_q(&mut self) -> anyhow::Result<f32> {
+        self.lxi.get_f(":CURR:SLEW:NEG?")
+    }
 }
 
 #[derive(Clone, Copy, Debug)]
 pub enum Func {
     Curr,
     Volt,
-    Pow,
+    Powr,
     Res,
     Led,
 }
 impl fmt::Display for Func {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        let p = match *self {
+        f.write_str(match *self {
             Self::Curr => "CURR",
             Self::Volt => "VOLT",
-            Self::Pow => "POW",
+            Self::Powr => "POW",
             Self::Res => "RES",
             Self::Led => "LED",
-        };
-        f.write_str(p)
+        })
+    }
+}
+impl FromStr for Func {
+    type Err = anyhow::Error;
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s {
+            "CURRENT" => Ok(Func::Curr),
+            "VOLTAGE" => Ok(Func::Volt),
+            "POWER" => Ok(Func::Powr),
+            "RESISTANCE" => Ok(Func::Res),
+            "LED" => Ok(Func::Led),
+            _ => Err(anyhow!("Unknown function")),
+        }
     }
 }
 
@@ -181,12 +218,10 @@ impl fmt::Display for IRange {
         f.write_str((*self as usize).to_string().as_str())
     }
 }
-impl IRange {
-    pub fn from_str<S>(s: S) -> anyhow::Result<Self>
-    where
-        S: AsRef<str>,
-    {
-        match s.as_ref().parse::<u32>()? {
+impl FromStr for IRange {
+    type Err = anyhow::Error;
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s.parse::<u32>()? {
             5 => Ok(Self::I5A),
             30 => Ok(Self::I30A),
             x => Err(anyhow!("Unknown IRange {x}")),
@@ -204,12 +239,10 @@ impl fmt::Display for VRange {
         f.write_str((*self as usize).to_string().as_str())
     }
 }
-impl VRange {
-    pub fn from_str<S>(s: S) -> anyhow::Result<Self>
-    where
-        S: AsRef<str>,
-    {
-        match s.as_ref().parse::<u32>()? {
+impl FromStr for VRange {
+    type Err = anyhow::Error;
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s.parse::<u32>()? {
             36 => Ok(Self::V36V),
             150 => Ok(Self::V150V),
             x => Err(anyhow!("Unknown VRange {x}")),
@@ -226,13 +259,34 @@ pub enum RRange {
 }
 impl fmt::Display for RRange {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        let p = match *self {
+        f.write_str(match *self {
             Self::Low => "LOW",
             Self::Middle => "MIDDLE",
             Self::High => "HIGH",
             Self::Upper => "UPPER",
-        };
-        f.write_str(p)
+        })
+    }
+}
+
+#[derive(Clone, Copy, Debug)]
+pub enum Slew {
+    Min,     // 0.001 V/µs
+    Max,     // 0.500 V/µs
+    Default, // same as Max
+    APerUs(f32),
+}
+impl fmt::Display for Slew {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        let s;
+        f.write_str(match *self {
+            Self::Min => "MIN",
+            Self::Max => "MAX",
+            Self::Default => "DEF",
+            Self::APerUs(v) => {
+                s = v.to_string();
+                s.as_str()
+            }
+        })
     }
 }
 

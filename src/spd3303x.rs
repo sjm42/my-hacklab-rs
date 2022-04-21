@@ -3,7 +3,7 @@
 
 use anyhow::anyhow;
 use num::traits::Float;
-use std::{fmt, fmt::Display, net::ToSocketAddrs};
+use std::{fmt, fmt::Display, net::ToSocketAddrs, str::FromStr};
 
 use crate::*;
 
@@ -92,12 +92,15 @@ impl SPD3303XStatus {
             },
         }
     }
-    pub fn from_hex<S>(st_str: S) -> anyhow::Result<Self>
-    where
-        S: AsRef<str>,
-    {
-        let st = u16::from_str_radix(st_str.as_ref(), 16)?;
-        Ok(Self::from_u16(st))
+}
+impl FromStr for SPD3303XStatus {
+    type Err = anyhow::Error;
+    fn from_str(st_str: &str) -> Result<Self, Self::Err> {
+        if let Some(hex_str) = st_str.strip_prefix("0x") {
+            Ok(Self::from_u16(u16::from_str_radix(hex_str, 16)?))
+        } else {
+            Err(anyhow!("Invalid status format"))
+        }
     }
 }
 
@@ -124,12 +127,7 @@ impl SPD3303X {
         self.lxi.req("SYST:VERS?")
     }
     pub fn status_q(&mut self) -> anyhow::Result<SPD3303XStatus> {
-        let str_status = self.lxi.req("SYST:STAT?")?;
-        if let Some(hex_str) = str_status.strip_prefix("0x") {
-            SPD3303XStatus::from_hex(hex_str)
-        } else {
-            Err(anyhow!("Invalid status format"))
-        }
+        SPD3303XStatus::from_str(self.lxi.req("SYST:STAT?")?.as_str())
     }
     pub fn error_q(&mut self) -> anyhow::Result<String> {
         self.lxi.req("SYST:ERR?")
