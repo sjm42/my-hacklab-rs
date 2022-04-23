@@ -2,7 +2,6 @@
 #![allow(dead_code)]
 
 use anyhow::anyhow;
-use num::traits::Float;
 use std::{fmt, fmt::Display, net::ToSocketAddrs, str::FromStr};
 
 use crate::*;
@@ -140,19 +139,32 @@ impl SDL1000X {
     pub fn curr_vrange_q(&mut self) -> anyhow::Result<VRange> {
         VRange::from_str(self.lxi.req(":CURR:VRANG?")?.as_str())
     }
-    pub fn curr_curr<F>(&mut self, v: F) -> anyhow::Result<()>
-    where
-        F: Float + Display,
-    {
-        self.lxi.set_f(":CURR", v)?;
+    pub fn curr_check(&mut self, curr: Curr) -> anyhow::Result<()> {
+        if let Curr::A(val) = curr {
+            let curr_max = self.curr_irange_q()? as u32 as f32;
+            if val < 0.0 {
+                return Err(anyhow!("Current {val} is negative."));
+            } else if val > curr_max {
+                return Err(anyhow!("Current {val} too high, max={curr_max}"));
+            }
+        }
         Ok(())
     }
+    pub fn curr_curr(&mut self, c: Curr) -> anyhow::Result<()> {
+        self.curr_check(c)?;
+        self.lxi.set_s(":CURR", &c.to_string())?;
+        Ok(())
+    }
+    pub fn curr_curr_q(&mut self) -> anyhow::Result<f32> {
+        self.lxi.get_f(":CURR?")
+    }
+
     pub fn slew_check(slew: Slew) -> anyhow::Result<()> {
         if let Slew::APerUs(val) = slew {
             if val < SLEW_MIN {
-                return Err(anyhow!("Slew {} too low, min={}", slew, SLEW_MIN));
+                return Err(anyhow!("Slew {val} too low, min={SLEW_MIN}"));
             } else if val > SLEW_MAX {
-                return Err(anyhow!("Slew {} too high, max={}", slew, SLEW_MAX));
+                return Err(anyhow!("Slew {val} too high, max={SLEW_MAX}"));
             }
         }
         Ok(())
@@ -183,7 +195,7 @@ pub enum Func {
     Res,
     Led,
 }
-impl fmt::Display for Func {
+impl Display for Func {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         f.write_str(match *self {
             Self::Curr => "CURR",
@@ -209,11 +221,33 @@ impl FromStr for Func {
 }
 
 #[derive(Clone, Copy, Debug)]
+pub enum Curr {
+    Min,     // 0.001 V/µs
+    Max,     // 0.500 V/µs
+    Default, // same as Max
+    A(f32),
+}
+impl Display for Curr {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        let s;
+        f.write_str(match *self {
+            Self::Min => "MIN",
+            Self::Max => "MAX",
+            Self::Default => "DEF",
+            Self::A(a) => {
+                s = a.to_string();
+                s.as_str()
+            }
+        })
+    }
+}
+
+#[derive(Clone, Copy, Debug)]
 pub enum IRange {
     I5A = 5,
     I30A = 30,
 }
-impl fmt::Display for IRange {
+impl Display for IRange {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         f.write_str((*self as usize).to_string().as_str())
     }
@@ -234,7 +268,7 @@ pub enum VRange {
     V36V = 36,
     V150V = 150,
 }
-impl fmt::Display for VRange {
+impl Display for VRange {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         f.write_str((*self as usize).to_string().as_str())
     }
@@ -257,7 +291,7 @@ pub enum RRange {
     High,
     Upper,
 }
-impl fmt::Display for RRange {
+impl Display for RRange {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         f.write_str(match *self {
             Self::Low => "LOW",
@@ -275,7 +309,7 @@ pub enum Slew {
     Default, // same as Max
     APerUs(f32),
 }
-impl fmt::Display for Slew {
+impl Display for Slew {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         let s;
         f.write_str(match *self {
@@ -287,6 +321,33 @@ impl fmt::Display for Slew {
                 s.as_str()
             }
         })
+    }
+}
+
+#[derive(Clone, Copy, Debug)]
+pub enum Transient {
+    Continuous,
+    Pulse,
+    Toggle,
+}
+impl Display for Transient {
+    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
+        f.write_str(match *self {
+            Self::Continuous => "CONT",
+            Self::Pulse => "PULS",
+            Self::Toggle => "TOGG",
+        })
+    }
+}
+impl FromStr for Transient {
+    type Err = anyhow::Error;
+    fn from_str(s: &str) -> Result<Self, Self::Err> {
+        match s {
+            "CONTINUOUS" => Ok(Self::Continuous),
+            "PULSE" => Ok(Self::Pulse),
+            "TOGGLE" => Ok(Self::Toggle),
+            x => Err(anyhow!("Unknown transient mode {x}")),
+        }
     }
 }
 

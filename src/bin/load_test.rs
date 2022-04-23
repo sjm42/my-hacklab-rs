@@ -37,7 +37,7 @@ fn main() -> anyhow::Result<()> {
     load.lxi.req(":current:irange?")?;
     load.lxi.req(":current:vrange?")?;
 
-    load.curr_curr(CURR_START)?;
+    load.curr_curr(Curr::A(CURR_START))?;
     load.lxi.set_state(":input:state", PortState::On)?;
 
     info!("***");
@@ -51,7 +51,7 @@ fn main() -> anyhow::Result<()> {
     while curr < CURR_LIMIT {
         curr += curr_step;
         curr_step *= 1.5;
-        load.curr_curr(curr)?;
+        load.curr_curr(Curr::A(curr))?;
 
         thread::sleep(time::Duration::new(2, 0));
         load.res_m()?;
@@ -105,7 +105,7 @@ fn steps_i(
     i_start: f32,
     i_step: f32,
 ) -> anyhow::Result<(f32, usize)> {
-    ld.curr_curr(i_start)?;
+    ld.curr_curr(Curr::A(i_start))?;
     thread::sleep(time::Duration::new(2, 0));
     let v_initial = ld.volt_m()?;
 
@@ -118,7 +118,7 @@ fn steps_i(
         n += 1;
         i_now += i_sign * i_step;
 
-        ld.curr_curr(i_now)?;
+        ld.curr_curr(Curr::A(i_now))?;
         thread::sleep(time::Duration::new(1, 0));
         let v_now = ld.volt_m()?;
 
