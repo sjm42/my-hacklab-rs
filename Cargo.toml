@@ -1,20 +1,23 @@
+# Cargo.toml
+
 [package]
 name = "my-hacklab"
-version = "0.2.0"
+version = "0.2.1"
 edition = "2021"
 
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
 anyhow = "1.0"
-env_logger = "0.9"
+env_logger = "0.10"
 log = "0.4"
 structopt = "0.3"
 lxi = "0.1"
 num = "0.4"
 
+
 [build-dependencies]
 build-data = "0.1"
+
 
 [profile.release]
 lto = true
