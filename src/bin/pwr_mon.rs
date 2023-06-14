@@ -28,14 +28,20 @@ fn main() -> anyhow::Result<()> {
 
     info!("PWR status:\n{:#?}", pwr.status_q()?);
 
+    pwr.lxi.v_off();
     thread::sleep(time::Duration::new(1, 0));
 
     loop {
-        let volt = pwr.volt_m(Ch::Ch1)?;
-        let curr = pwr.curr_m(Ch::Ch1)?;
-        let pwr = pwr.powr_m(Ch::Ch1)?;
+        let (curr1, curr2) = (pwr.curr_m(Ch::Ch1)?, pwr.curr_m(Ch::Ch2)?);
+        let (volt1, volt2) = (pwr.volt_m(Ch::Ch1)?, pwr.volt_m(Ch::Ch2)?);
+        let (pwr1, pwr2) = (pwr.powr_m(Ch::Ch1)?, pwr.powr_m(Ch::Ch2)?);
+        let volt = volt1 + volt2;
+        let pwr = pwr1 + pwr2;
 
-        info!("Volt: {volt:.3}V Curr: {curr:.3}A Power: {pwr:.2}W");
+        info!("***");
+        info!("Volt: {volt:.3}V ({volt1:.3} + {volt2:.3}");
+        info!("Curr: {curr1:.3}A + {curr2:.3}A");
+        info!("Power: {pwr:.2}W ({pwr1:.2} + {pwr2:.2})");
         thread::sleep(time::Duration::new(10, 0));
     }
 }
