@@ -2,19 +2,22 @@
 
 #![allow(dead_code)]
 
-use anyhow::anyhow;
-use log::*;
-use lxi::*;
-use num::traits::Float;
+use std::{fmt, fmt::Display, time};
 use std::net::{SocketAddr, ToSocketAddrs};
 use std::str::FromStr;
-use std::{fmt, fmt::Display, time};
+
+use anyhow::anyhow;
+use lxi::*;
+use num::traits::Float;
+
+use crate::*;
 
 #[derive(Debug)]
 pub enum PortState {
     On,
     Off,
 }
+
 impl fmt::Display for PortState {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         let p = match *self {
@@ -32,6 +35,7 @@ pub enum Ch {
     Ch3,
     Ch4,
 }
+
 impl fmt::Display for Ch {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         let p = match *self {
@@ -50,9 +54,11 @@ pub enum Meas {
     Curr,
     Powr,
     Res,
-    Ext,   // don't ask
+    Ext,
+    // don't ask
     Dummy, // also don't ask
 }
+
 impl fmt::Display for Meas {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         let p = match *self {
@@ -76,8 +82,8 @@ pub struct StdLxi {
 
 impl LxiCommands for StdLxi {
     fn create<S>(name: S, addr: SocketAddr, lxi_dev: LxiTextDevice) -> Self
-    where
-        S: AsRef<str>,
+        where
+            S: AsRef<str>,
     {
         StdLxi {
             name: name.as_ref().to_owned(),
@@ -105,8 +111,8 @@ impl LxiCommands for StdLxi {
 
 pub trait LxiCommands {
     fn create<S>(name: S, addr: SocketAddr, lxi_dev: LxiTextDevice) -> Self
-    where
-        S: AsRef<str>;
+        where
+            S: AsRef<str>;
     fn name(&self) -> &str;
     fn addr(&self) -> SocketAddr;
     fn get_v(&self) -> bool;
@@ -114,10 +120,10 @@ pub trait LxiCommands {
     fn dev(&mut self) -> &mut LxiTextDevice;
 
     fn new<S, H>(name: S, host: H) -> anyhow::Result<Self>
-    where
-        S: AsRef<str>,
-        H: fmt::Display + AsRef<str> + ToSocketAddrs,
-        Self: Sized,
+        where
+            S: AsRef<str>,
+            H: fmt::Display + AsRef<str> + ToSocketAddrs,
+            Self: Sized,
     {
         let addr = match host.to_socket_addrs()?.next() {
             None => return Err(anyhow!("Invalid address: {host}")),
@@ -145,15 +151,15 @@ pub trait LxiCommands {
         self.set_v(v)
     }
     fn q_send<S>(&mut self, s: S) -> anyhow::Result<()>
-    where
-        S: AsRef<str> + Display,
+        where
+            S: AsRef<str> + Display,
     {
         Ok(self.dev().send(s.as_ref().as_bytes())?)
     }
 
     fn send<S>(&mut self, s: S) -> anyhow::Result<()>
-    where
-        S: AsRef<str> + Display,
+        where
+            S: AsRef<str> + Display,
     {
         if self.v() {
             info!("Send: {name} <-- {s}", name = self.name());
@@ -176,8 +182,8 @@ pub trait LxiCommands {
     }
 
     fn req<S>(&mut self, s: S) -> anyhow::Result<String>
-    where
-        S: AsRef<str> + Display,
+        where
+            S: AsRef<str> + Display,
     {
         self.q_send(s.as_ref())?;
         let r = self.q_recv()?;
@@ -188,26 +194,26 @@ pub trait LxiCommands {
     }
 
     fn set_f<S, F>(&mut self, subsys: S, v: F) -> anyhow::Result<F>
-    where
-        S: AsRef<str> + Display,
-        F: Float + Display,
+        where
+            S: AsRef<str> + Display,
+            F: Float + Display,
     {
         self.send(&format!("{} {v}", subsys.as_ref()))?;
         Ok(v)
     }
 
     fn set_s<S>(&mut self, subsys: S, v: S) -> anyhow::Result<S>
-    where
-        S: AsRef<str> + Display,
+        where
+            S: AsRef<str> + Display,
     {
         self.send(&format!("{} {}", subsys.as_ref(), v.as_ref()))?;
         Ok(v)
     }
 
     fn get_f<S, F>(&mut self, subsys: S) -> anyhow::Result<F>
-    where
-        S: AsRef<str> + Display,
-        F: Float + Display + FromStr,
+        where
+            S: AsRef<str> + Display,
+            F: Float + Display + FromStr,
     {
         let m = self.req(subsys.as_ref())?;
         if let Ok(f) = m.parse::<F>() {
@@ -218,16 +224,16 @@ pub trait LxiCommands {
     }
 
     fn set_state<S>(&mut self, subsys: S, state: PortState) -> anyhow::Result<PortState>
-    where
-        S: AsRef<str> + Display,
+        where
+            S: AsRef<str> + Display,
     {
         self.send(&format!("{} {state}", subsys.as_ref()))?;
         Ok(state)
     }
 
     fn get_state<S>(&mut self, subsys: S) -> anyhow::Result<PortState>
-    where
-        S: AsRef<str> + Display,
+        where
+            S: AsRef<str> + Display,
     {
         let resp = self.req(subsys.as_ref())?;
         Ok(match resp.as_str() {
@@ -237,8 +243,8 @@ pub trait LxiCommands {
     }
 
     fn get_stateb<S>(&mut self, subsys: S) -> anyhow::Result<bool>
-    where
-        S: AsRef<str> + Display,
+        where
+            S: AsRef<str> + Display,
     {
         let resp = self.get_state(subsys.as_ref())?;
         Ok(matches!(resp, PortState::On))

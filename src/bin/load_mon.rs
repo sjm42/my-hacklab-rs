@@ -1,19 +1,24 @@
 // main.rs
 
-use log::*;
 use std::{thread, time};
-use structopt::StructOpt;
 
 use my_hacklab::*;
 
-const LAB_LOAD: &str = "lab-load.siu.ro:5025";
+#[derive(Clone, Debug, Default, Parser)]
+pub struct MyOpts {
+    #[command(flatten)]
+    c: OptsCommon,
+
+    #[arg(long)]
+    pub load: String,
+}
 
 fn main() -> anyhow::Result<()> {
-    let opts = OptsCommon::from_args();
-    start_pgm(&opts, "Load test");
-    debug!("Global config: {opts:?}");
+    let opts = MyOpts::parse();
+    opts.c.start_pgm(env!("CARGO_BIN_NAME"));
+    debug!("config: {opts:?}");
 
-    let mut load = SDL1000X::new("LOAD", LAB_LOAD)?;
+    let mut load = SDL1000X::new("LOAD", &opts.load)?;
     //ld.verbose = true;
     info!("Lab LOAD at {:?}", load.lxi.addr());
 

@@ -1,8 +1,9 @@
 // sdl1000x.rs
 #![allow(dead_code)]
 
-use anyhow::anyhow;
 use std::{fmt, fmt::Display, net::ToSocketAddrs, str::FromStr};
+
+use anyhow::anyhow;
 
 use crate::*;
 
@@ -17,10 +18,10 @@ pub struct SDL1000X {
 
 impl SDL1000X {
     pub fn new<S, H>(name: S, host: H) -> anyhow::Result<Self>
-    where
-        S: AsRef<str>,
-        H: fmt::Display + AsRef<str> + ToSocketAddrs,
-        Self: Sized,
+        where
+            S: AsRef<str>,
+            H: fmt::Display + AsRef<str> + ToSocketAddrs,
+            Self: Sized,
     {
         Ok(Self {
             lxi: StdLxi::new(name, host)?,
@@ -195,6 +196,7 @@ pub enum Func {
     Res,
     Led,
 }
+
 impl Display for Func {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         f.write_str(match *self {
@@ -206,6 +208,7 @@ impl Display for Func {
         })
     }
 }
+
 impl FromStr for Func {
     type Err = anyhow::Error;
     fn from_str(s: &str) -> Result<Self, Self::Err> {
@@ -222,11 +225,15 @@ impl FromStr for Func {
 
 #[derive(Clone, Copy, Debug)]
 pub enum Curr {
-    Min,     // 0.001 V/µs
-    Max,     // 0.500 V/µs
-    Default, // same as Max
+    Min,
+    // 0.001 V/µs
+    Max,
+    // 0.500 V/µs
+    Default,
+    // same as Max
     A(f32),
 }
+
 impl Display for Curr {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         let s;
@@ -247,11 +254,13 @@ pub enum IRange {
     I5A = 5,
     I30A = 30,
 }
+
 impl Display for IRange {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         f.write_str((*self as usize).to_string().as_str())
     }
 }
+
 impl FromStr for IRange {
     type Err = anyhow::Error;
     fn from_str(s: &str) -> Result<Self, Self::Err> {
@@ -268,11 +277,13 @@ pub enum VRange {
     V36V = 36,
     V150V = 150,
 }
+
 impl Display for VRange {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         f.write_str((*self as usize).to_string().as_str())
     }
 }
+
 impl FromStr for VRange {
     type Err = anyhow::Error;
     fn from_str(s: &str) -> Result<Self, Self::Err> {
@@ -291,6 +302,7 @@ pub enum RRange {
     High,
     Upper,
 }
+
 impl Display for RRange {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         f.write_str(match *self {
@@ -304,11 +316,15 @@ impl Display for RRange {
 
 #[derive(Clone, Copy, Debug)]
 pub enum Slew {
-    Min,     // 0.001 V/µs
-    Max,     // 0.500 V/µs
-    Default, // same as Max
+    Min,
+    // 0.001 V/µs
+    Max,
+    // 0.500 V/µs
+    Default,
+    // same as Max
     APerUs(f32),
 }
+
 impl Display for Slew {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         let s;
@@ -330,6 +346,7 @@ pub enum Transient {
     Pulse,
     Toggle,
 }
+
 impl Display for Transient {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         f.write_str(match *self {
@@ -339,6 +356,7 @@ impl Display for Transient {
         })
     }
 }
+
 impl FromStr for Transient {
     type Err = anyhow::Error;
     fn from_str(s: &str) -> Result<Self, Self::Err> {

@@ -1,9 +1,10 @@
 // spd3303x.rs
 #![allow(dead_code)]
 
+use std::{fmt, fmt::Display, net::ToSocketAddrs, str::FromStr};
+
 use anyhow::anyhow;
 use num::traits::Float;
-use std::{fmt, fmt::Display, net::ToSocketAddrs, str::FromStr};
 
 use crate::*;
 
@@ -11,7 +12,8 @@ use crate::*;
 
 #[derive(Debug)]
 pub enum PwrChannelMode {
-    CV, // Constant voltage
+    CV,
+    // Constant voltage
     CC, // Constant current i.e. current limit reached
 }
 
@@ -41,6 +43,7 @@ pub struct SPD3303XStatus {
     pub timer1: PortState,
     pub timer2: PortState,
 }
+
 impl SPD3303XStatus {
     pub fn from_u16(st: u16) -> Self {
         Self {
@@ -93,6 +96,7 @@ impl SPD3303XStatus {
         }
     }
 }
+
 impl FromStr for SPD3303XStatus {
     type Err = anyhow::Error;
     fn from_str(st_str: &str) -> Result<Self, Self::Err> {
@@ -110,10 +114,10 @@ pub struct SPD3303X {
 
 impl SPD3303X {
     pub fn new<S, H>(name: S, host: H) -> anyhow::Result<Self>
-    where
-        S: AsRef<str>,
-        H: fmt::Display + AsRef<str> + ToSocketAddrs,
-        Self: Sized,
+        where
+            S: AsRef<str>,
+            H: fmt::Display + AsRef<str> + ToSocketAddrs,
+            Self: Sized,
     {
         Ok(Self {
             lxi: StdLxi::new(name, host)?,
@@ -170,23 +174,23 @@ impl SPD3303X {
     }
 
     pub fn volt<F>(&mut self, c: Ch, v: F) -> anyhow::Result<F>
-    where
-        F: Float + Display,
+        where
+            F: Float + Display,
     {
         self.lxi.set_f(format!("{c}:VOLT"), v)?;
         Ok(v)
     }
     pub fn curr<F>(&mut self, c: Ch, v: F) -> anyhow::Result<F>
-    where
-        F: Float + Display,
+        where
+            F: Float + Display,
     {
         self.lxi.set_f(format!("{c}:CURR"), v)?;
         Ok(v)
     }
 
     fn param_q<S>(&mut self, c: Ch, param: S) -> anyhow::Result<f32>
-    where
-        S: AsRef<str>,
+        where
+            S: AsRef<str>,
     {
         match c {
             Ch::Ch1 | Ch::Ch2 => {}

@@ -1,28 +1,43 @@
 // startup.rs
 
-use log::*;
 use std::env;
-use structopt::StructOpt;
 
-#[derive(Clone, Debug, Default, StructOpt)]
+use crate::*;
+
+#[derive(Clone, Debug, Default, Args)]
 pub struct OptsCommon {
-    #[structopt(short, long)]
+    #[arg(short, long)]
+    pub verbose: bool,
+    #[arg(short, long)]
     pub debug: bool,
-    #[structopt(short, long)]
+    #[arg(short, long)]
     pub trace: bool,
 }
+
 impl OptsCommon {
-    pub fn finish(&mut self) -> anyhow::Result<()> {
-        Ok(())
-    }
-    fn get_loglevel(&self) -> LevelFilter {
+    pub fn get_loglevel(&self) -> Level {
         if self.trace {
-            LevelFilter::Trace
+            Level::TRACE
         } else if self.debug {
-            LevelFilter::Debug
+            Level::DEBUG
+        } else if self.verbose {
+            Level::INFO
         } else {
-            LevelFilter::Info
+            Level::ERROR
         }
+    }
+
+    pub fn start_pgm(&self, name: &str) {
+        tracing_subscriber::fmt()
+            .with_max_level(self.get_loglevel())
+            .with_target(false)
+            .init();
+
+        info!("Starting up {name}...");
+        debug!("Git branch: {}", env!("GIT_BRANCH"));
+        debug!("Git commit: {}", env!("GIT_COMMIT"));
+        debug!("Source timestamp: {}", env!("SOURCE_TIMESTAMP"));
+        debug!("Compiler version: {}", env!("RUSTC_VERSION"));
     }
 }
 
@@ -30,18 +45,6 @@ pub fn expand_home(pathname: &mut String) -> anyhow::Result<()> {
     let home = env::var("HOME")?;
     *pathname = pathname.as_str().replace("$HOME", &home);
     Ok(())
-}
-
-pub fn start_pgm(c: &OptsCommon, desc: &str) {
-    env_logger::Builder::new()
-        .filter_level(c.get_loglevel())
-        .format_timestamp_secs()
-        .init();
-    info!("Starting up {desc}...");
-    debug!("Git branch: {}", env!("GIT_BRANCH"));
-    debug!("Git commit: {}", env!("GIT_COMMIT"));
-    debug!("Source timestamp: {}", env!("SOURCE_TIMESTAMP"));
-    debug!("Compiler version: {}", env!("RUSTC_VERSION"));
 }
 
 // EOF

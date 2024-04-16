@@ -1,18 +1,22 @@
 // main.rs
 
-use log::*;
-use structopt::StructOpt;
-
 use my_hacklab::*;
 
-const LAB_POWER: &str = "lab-power.siu.ro:5025";
+#[derive(Clone, Debug, Default, Parser)]
+pub struct MyOpts {
+    #[command(flatten)]
+    c: OptsCommon,
+
+    #[arg(long)]
+    pub power: String,
+}
 
 fn main() -> anyhow::Result<()> {
-    let opts = OptsCommon::from_args();
-    start_pgm(&opts, "My Hacklab");
-    debug!("Global config: {opts:?}");
+    let opts = MyOpts::parse();
+    opts.c.start_pgm(env!("CARGO_BIN_NAME"));
+    debug!("config: {opts:?}");
 
-    let mut pwr = SPD3303X::new("PWR", LAB_POWER)?;
+    let mut pwr = SPD3303X::new("PWR", &opts.power)?;
 
     pwr.lxi.v_on();
     info!("Lab PWR at {:?}", pwr.lxi.addr());

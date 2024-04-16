@@ -1,18 +1,19 @@
 # Cargo.toml
 
 [package]
-name = "my-hacklab"
-version = "0.2.2"
+name = "my_hacklab"
+version = "0.3.0"
 edition = "2021"
 resolver = "2"
 
+
 [dependencies]
-anyhow = "1.0"
-env_logger = "0.10"
-log = "0.4"
-structopt = "0.3"
-lxi = "0.1"
-num = "0.4"
+anyhow = "1"
+clap = { version = "4", features = ["derive"] }
+lxi = "0"
+num = "0"
+tracing = { version = "0", features = ["log"] }
+tracing-subscriber = "0"
 
 
 [build-dependencies]
@@ -20,8 +21,7 @@ build-data = "0.1"
 
 
 [profile.release]
-lto = true
-opt-level = 3 #default
-# opt-level = 'z'  # Optimize for size.
+lto = "fat"
+opt-level = 3
 
 # EOF
